@@ -17,7 +17,7 @@ app.use('/api/users', userRoutes)
 
 // Root
 app.get('/', (req, res) => {
-  res.send('🎉 MERN Template Backend is live!')
+  res.send('MERN Template Backend is live!')
 })
 
 // Error handling
