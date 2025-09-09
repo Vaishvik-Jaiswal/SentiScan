@@ -106,7 +106,7 @@ npm run dev
 
 ### 4. Access the Application
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:4000
+- Backend API: http://localhost:5000
 
 ## 🔧 Configuration
 
@@ -182,10 +182,6 @@ npm run dev
 3. Commit changes: `git commit -m 'Add amazing feature'`
 4. Push to branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
