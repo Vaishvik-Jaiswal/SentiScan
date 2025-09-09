@@ -7,6 +7,35 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 })
 
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem('token')
+      delete axios.defaults.headers.common['Authorization']
+      // Redirect to login page
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Article API functions
 export const articleAPI = {
   // Upload article
@@ -18,6 +47,16 @@ export const articleAPI = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+    })
+    return response.data
+  },
+
+  // Create article from text
+  createFromText: async (title, content, language) => {
+    const response = await api.post('/api/articles/text', {
+      title,
+      content,
+      language,
     })
     return response.data
   },

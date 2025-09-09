@@ -17,7 +17,7 @@ const articleSchema = new mongoose.Schema(
     },
     fileType: {
       type: String,
-      enum: ['pdf', 'docx', 'txt'],
+      enum: ['pdf', 'docx', 'txt', 'png', 'jpg'],
       required: true,
     },
     fileSize: {

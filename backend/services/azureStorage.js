@@ -27,13 +27,17 @@ class AzureStorageService {
   }
 
   async uploadFile(buffer, fileName, contentType) {
+    console.log(`☁️ Attempting Azure upload: ${fileName} (${buffer.length} bytes)`)
+    
     if (!this.blobServiceClient) {
+      console.log('⚠️ Azure Blob Storage not configured')
       throw new Error('Azure Blob Storage not configured')
     }
 
     try {
       // Get container client
       const containerClient = this.blobServiceClient.getContainerClient(this.containerName)
+      console.log(`📁 Using container: ${this.containerName}`)
       
       // Ensure container exists
       await containerClient.createIfNotExists()
@@ -41,6 +45,7 @@ class AzureStorageService {
       // Generate unique blob name
       const timestamp = Date.now()
       const blobName = `sentiscan/${timestamp}-${fileName}`
+      console.log(`📝 Generated blob name: ${blobName}`)
       
       // Get block blob client
       const blockBlobClient = containerClient.getBlockBlobClient(blobName)
@@ -51,21 +56,31 @@ class AzureStorageService {
         },
       }
 
+      console.log('⬆️ Starting blob upload...')
       await blockBlobClient.upload(buffer, buffer.length, uploadOptions)
       
       console.log(`✅ File uploaded to Azure Blob Storage: ${blobName}`)
       
       // Generate SAS URL for accessing the file
+      console.log('🔗 Generating SAS URL...')
       const sasUrl = this.generateSasUrl(blobName)
       
-      return {
+      const result = {
         blobName,
         url: sasUrl,
         containerName: this.containerName
       }
+      
+      console.log('✅ Azure upload completed:', { blobName, hasUrl: !!sasUrl })
+      return result
     } catch (error) {
       console.error('❌ Error uploading to Azure Blob Storage:', error)
-      throw new Error('Failed to upload file to storage')
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        statusCode: error.statusCode
+      })
+      throw new Error(`Failed to upload file to storage: ${error.message}`)
     }
   }
 

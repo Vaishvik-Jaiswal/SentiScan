@@ -196,8 +196,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email your-email@example.com or create an issue on GitHub.
+For support, email kashyapkshitij7704@gmail.com or create an issue on GitHub.
 
 ---
 
-**Built with ❤️ by [Your Name](https://your-portfolio.com)**
+**Built with ❤️ by [Kshitij Kashyap](https://kshitij-kashyap-portfolio.netlify.app/)**

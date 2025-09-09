@@ -36,11 +36,10 @@ const authReducer = (state, action) => {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState)
 
-  // Configure axios defaults
+  // Check for existing token on mount
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       // Verify token validity
       verifyToken(token)
     } else {
@@ -50,7 +49,12 @@ export const AuthProvider = ({ children }) => {
 
   const verifyToken = async (token) => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`)
+      // Use axios with manual token header for verification
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
       dispatch({ 
         type: 'LOGIN_SUCCESS', 
         payload: { 
@@ -60,7 +64,6 @@ export const AuthProvider = ({ children }) => {
       })
     } catch (error) {
       localStorage.removeItem('token')
-      delete axios.defaults.headers.common['Authorization']
       dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
@@ -75,7 +78,6 @@ export const AuthProvider = ({ children }) => {
       
       const { token, ...user } = response.data
       localStorage.setItem('token', token)
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       
       dispatch({ 
         type: 'LOGIN_SUCCESS', 
@@ -101,7 +103,6 @@ export const AuthProvider = ({ children }) => {
       
       const { token, ...user } = response.data
       localStorage.setItem('token', token)
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       
       dispatch({ 
         type: 'LOGIN_SUCCESS', 
@@ -118,7 +119,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token')
-    delete axios.defaults.headers.common['Authorization']
     dispatch({ type: 'LOGOUT' })
   }
 

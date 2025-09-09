@@ -62,7 +62,11 @@ export default function Dashboard() {
       setAnalytics(analyticsData)
     } catch (error) {
       console.error('Error fetching data:', error)
-      toast.error('Failed to load dashboard data')
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please login again.')
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to load dashboard data')
+      }
     } finally {
       setLoading(false)
     }
@@ -376,7 +380,11 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {articles.map((article) => (
-                    <tr key={article._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr 
+                      key={article._id} 
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => navigate(`/article/${article._id}`)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <FileText className="h-5 w-5 text-gray-400 mr-2" />
@@ -427,12 +435,18 @@ export default function Dashboard() {
                           <Link
                             to={`/article/${article._id}`}
                             className="text-blue-600 hover:text-blue-500"
+                            onClick={(e) => e.stopPropagation()}
+                            title="View article"
                           >
                             <Eye className="h-4 w-4" />
                           </Link>
                           <button
-                            onClick={() => handleDeleteArticle(article._id)}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row click
+                              handleDeleteArticle(article._id);
+                            }}
                             className="text-red-600 hover:text-red-500"
+                            title="Delete article"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>

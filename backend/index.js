@@ -19,7 +19,7 @@ app.use('/api/articles', articleRoutes)
 
 // Root
 app.get('/', (req, res) => {
-  res.send('MERN Template Backend is live!')
+  res.send('SentiScan Backend is live!')
 })
 
 // Error handling
