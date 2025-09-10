@@ -17,7 +17,7 @@ const articleSchema = new mongoose.Schema(
     },
     fileType: {
       type: String,
-      enum: ['pdf', 'docx', 'txt', 'png', 'jpg'],
+      enum: ['pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'],
       required: true,
     },
     fileSize: {
@@ -26,7 +26,8 @@ const articleSchema = new mongoose.Schema(
     },
     blobUrl: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
     },
     heading: {
       type: String,

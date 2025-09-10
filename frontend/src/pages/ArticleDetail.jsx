@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, FileText, Calendar, Globe, TrendingUp } from 'lucide-react'
+import { ArrowLeft, FileText, Calendar, Globe, TrendingUp, Download } from 'lucide-react'
+import axios from 'axios'
 import { articleAPI } from '../services/api'
 import { toast } from 'react-toastify'
+import FileViewer from '../components/FileViewer'
 
 const ArticleDetail = () => {
   const { id } = useParams()
@@ -50,6 +52,46 @@ const ArticleDetail = () => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const handleDownloadFile = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        toast.error('Please log in to download the file')
+        return
+      }
+
+      console.log(`🔗 Getting download URL for article: ${article._id}`)
+
+      // Get the direct download URL
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/articles/${article._id}/download-url`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        }
+      )
+
+      const { downloadUrl, filename, isDirectUrl } = response.data
+
+      // Create download link
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = filename
+      if (isDirectUrl) {
+        link.target = '_blank'
+      }
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('Download started')
+
+    } catch (error) {
+      console.error('Error downloading file:', error)
+      toast.error('Failed to download file')
+    }
   }
 
   if (loading) {
@@ -113,7 +155,14 @@ const ArticleDetail = () => {
                   </div>
                 </div>
               </div>
-              <div className="ml-4">
+              <div className="ml-4 flex items-center space-x-3">
+                <button
+                  onClick={handleDownloadFile}
+                  className="inline-flex items-center space-x-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  <Download className="h-3 w-3" />
+                  <span>Download</span>
+                </button>
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                   article.processingStatus === 'completed' ? 'text-green-800 bg-green-100 dark:bg-green-900/20' :
                   article.processingStatus === 'processing' ? 'text-yellow-800 bg-yellow-100 dark:bg-yellow-900/20' :
@@ -223,20 +272,11 @@ const ArticleDetail = () => {
           </div>
         </div>
 
-        {/* Article Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-            Article Content
-          </h2>
-          
-          <div className="prose dark:prose-invert max-w-none">
-            <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-              <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-                {article.content}
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* File Viewer */}
+        <FileViewer 
+          article={article} 
+          className="h-[700px]"
+        />
 
         {/* Processing Error */}
         {article.processingStatus === 'failed' && article.errorMessage && (

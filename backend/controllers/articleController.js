@@ -61,16 +61,17 @@ export const uploadArticle = asyncHandler(async (req, res) => {
     console.log('☁️ Uploading to Azure Blob Storage...')
     let blobName, url
     
-    if (azureStorage.isConfigured && azureStorage.isConfigured()) {
-      const uploadResult = await azureStorage.uploadFile(buffer, originalname, mimetype)
-      blobName = uploadResult.blobName
-      url = uploadResult.url
-      console.log('✅ Azure upload successful:', { blobName })
-    } else {
-      console.log('⚠️ Azure Storage not configured, using local storage fallback')
-      blobName = `local-${Date.now()}-${originalname}`
-      url = `local://uploads/${blobName}`
+    // Upload to Azure Blob Storage (REQUIRED)
+    if (!azureStorage.isConfigured || !azureStorage.isConfigured()) {
+      console.error('❌ Azure Storage is not configured!')
+      res.status(500)
+      throw new Error('Azure Storage is not configured. Please configure Azure Storage to upload files.')
     }
+
+    const uploadResult = await azureStorage.uploadFile(buffer, originalname, mimetype)
+    blobName = uploadResult.blobName
+    url = uploadResult.url
+    console.log('✅ Azure upload successful:', { blobName, url })
 
     // Extract text from file
     console.log('📄 Extracting text from file...')
@@ -236,8 +237,8 @@ export const deleteArticle = asyncHandler(async (req, res) => {
   console.log(`✅ Article found: ${article._id}, filename: ${article.filename}`)
 
   try {
-    // Delete from Azure Blob Storage if it's not a local file
-    if (article.filename && !article.filename.startsWith('local-') && !article.filename.startsWith('text-')) {
+    // Delete from Azure Blob Storage if it's an uploaded file
+    if (article.blobUrl && article.blobUrl.startsWith('https://')) {
       console.log(`🗑️ Attempting to delete from Azure Blob Storage: ${article.filename}`)
       
       if (azureStorage.isConfigured && azureStorage.isConfigured()) {
@@ -246,8 +247,10 @@ export const deleteArticle = asyncHandler(async (req, res) => {
       } else {
         console.log(`⚠️ Azure Storage not configured, skipping blob deletion`)
       }
+    } else if (article.filename?.startsWith('text-')) {
+      console.log(`ℹ️ Skipping file deletion for text-based article: ${article.filename}`)
     } else {
-      console.log(`ℹ️ Skipping blob deletion for local/text file: ${article.filename}`)
+      console.log(`ℹ️ No blob URL found, skipping file deletion: ${article.filename}`)
     }
   } catch (storageError) {
     console.error(`❌ Error deleting from storage: ${storageError.message}`)
@@ -260,6 +263,235 @@ export const deleteArticle = asyncHandler(async (req, res) => {
   console.log(`✅ Article deleted from database: ${article._id}`)
 
   res.json({ message: 'Article deleted successfully' })
+})
+
+// @desc    Serve article file
+// @route   GET /api/articles/:id/file
+// @access  Private
+export const serveArticleFile = asyncHandler(async (req, res) => {
+  console.log(`📁 File serve request for article: ${req.params.id}`)
+  
+  try {
+    const article = await Article.findById(req.params.id)
+
+    if (!article) {
+      console.log(`❌ Article not found: ${req.params.id}`)
+      res.status(404)
+      throw new Error('Article not found')
+    }
+
+    // Check if user owns this article
+    if (article.userId.toString() !== req.user._id.toString()) {
+      console.log(`❌ User ${req.user._id} not authorized to access article ${req.params.id}`)
+      res.status(401)
+      throw new Error('User not authorized')
+    }
+
+    console.log(`📄 Found article: ${article.heading}`)
+
+    // Set appropriate headers based on file type
+    const fileType = article.fileType?.toLowerCase()
+    let contentType = 'application/octet-stream'
+    
+    switch (fileType) {
+      case 'pdf':
+        contentType = 'application/pdf'
+        break
+      case 'jpg':
+      case 'jpeg':
+        contentType = 'image/jpeg'
+        break
+      case 'png':
+        contentType = 'image/png'
+        break
+      case 'gif':
+        contentType = 'image/gif'
+        break
+      case 'bmp':
+        contentType = 'image/bmp'
+        break
+      case 'webp':
+        contentType = 'image/webp'
+        break
+      case 'txt':
+        contentType = 'text/plain; charset=utf-8'
+        break
+      case 'docx':
+        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        break
+    }
+
+    // If it's a text-based article (created from paste, no actual file), return the content as text
+    if (article.filename?.startsWith('text-') || (!article.blobUrl && !article.filename)) {
+      console.log(`📝 Serving text content for article: ${req.params.id}`)
+      res.set({
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Disposition': `inline; filename="${article.originalName || 'article.txt'}"`,
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:5173'
+      })
+      return res.send(article.content || 'No content available')
+    }
+
+    // Check if we have a blob URL
+    if (article.blobUrl) {
+      // Handle Azure Storage files
+      if (article.blobUrl.startsWith('https://')) {
+        if (!azureStorage.isConfigured || !azureStorage.isConfigured()) {
+          console.error(`❌ Azure Storage not configured but file has blob URL: ${article.blobUrl}`)
+          
+          // Fall back to serving OCR content instead of failing
+          console.log(`ℹ️ Falling back to serving OCR content`)
+          res.set({
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Content-Disposition': `inline; filename="extracted-${article.originalName || 'content.txt'}"`,
+            'Cache-Control': 'no-cache',
+            'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:5173'
+          })
+          return res.send(article.content || 'Original file not accessible. This is the extracted content.')
+        }
+
+        try {
+          console.log(`☁️ Generating SAS URL for Azure blob: ${article.filename}`)
+          const sasUrl = await azureStorage.generateSasUrl(article.filename)
+          console.log(`✅ Generated SAS URL, redirecting...`)
+          
+          // Set appropriate headers before redirecting
+          res.set({
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=3600',
+            'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:5173',
+            'Access-Control-Allow-Methods': 'GET',
+            'Access-Control-Allow-Headers': 'Authorization, Content-Type'
+          })
+          
+          return res.redirect(sasUrl)
+        } catch (blobError) {
+          console.error(`❌ Error generating SAS URL:`, blobError)
+          
+          // Fall back to serving OCR content
+          console.log(`ℹ️ Falling back to serving OCR content`)
+          res.set({
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Content-Disposition': `inline; filename="extracted-${article.originalName || 'content.txt'}"`,
+            'Cache-Control': 'no-cache',
+            'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:5173'
+          })
+          return res.send(article.content || 'Original file not accessible. This is the extracted content.')
+        }
+      } 
+      // Handle local:// URLs by serving OCR content
+      else if (article.blobUrl.startsWith('local://')) {
+        console.log(`ℹ️ Local file URL detected: ${article.blobUrl}`)
+        console.log(`ℹ️ Serving OCR content instead of local file`)
+        
+        res.set({
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Disposition': `inline; filename="extracted-${article.originalName || 'content.txt'}"`,
+          'Cache-Control': 'no-cache',
+          'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:5173'
+        })
+        return res.send(article.content || 'Original file not accessible. This is the extracted content.')
+      }
+    }
+
+    // If no blob URL, serve OCR content
+    console.log(`ℹ️ No blob URL, serving OCR content: filename="${article.filename}"`)
+    res.set({
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Disposition': `inline; filename="extracted-${article.originalName || 'content.txt'}"`,
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:5173'
+    })
+    return res.send(article.content || 'No content available')
+
+  } catch (error) {
+    console.error(`❌ Error in serveArticleFile:`, error)
+    throw error
+  }
+})
+
+// @desc    Get direct download URL for article file
+// @route   GET /api/articles/:id/download-url
+// @access  Private
+export const getDownloadUrl = asyncHandler(async (req, res) => {
+  console.log(`🔗 Download URL request for article: ${req.params.id}`)
+  
+  try {
+    const article = await Article.findById(req.params.id)
+
+    if (!article) {
+      console.log(`❌ Article not found: ${req.params.id}`)
+      res.status(404)
+      throw new Error('Article not found')
+    }
+
+    // Check if user owns this article
+    if (article.userId.toString() !== req.user._id.toString()) {
+      console.log(`❌ User ${req.user._id} not authorized to access article ${req.params.id}`)
+      res.status(401)
+      throw new Error('User not authorized')
+    }
+
+    // If it's a text-based article (no actual file), return content as downloadable text
+    if (article.filename?.startsWith('text-') || (!article.blobUrl && !article.filename)) {
+      console.log(`📝 Generating download URL for text content: ${req.params.id}`)
+      
+      // Create a data URL for the text content
+      const textContent = article.content || 'No content available'
+      const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(textContent)}`
+      
+      return res.json({
+        downloadUrl: dataUrl,
+        filename: article.originalName || 'article.txt',
+        fileType: 'txt',
+        isDirectUrl: false
+      })
+    }
+
+    // Check if we have a blob URL for Azure Storage
+    if (article.blobUrl && article.blobUrl.startsWith('https://')) {
+      if (!azureStorage.isConfigured || !azureStorage.isConfigured()) {
+        console.error(`❌ Azure Storage not configured but file has blob URL: ${article.blobUrl}`)
+        res.status(500)
+        throw new Error('Azure Storage not configured')
+      }
+
+      try {
+        console.log(`☁️ Generating fresh SAS URL for Azure blob: ${article.filename}`)
+        const sasUrl = await azureStorage.generateSasUrl(article.filename, 1) // 1 hour expiry
+        
+        console.log(`✅ Generated fresh SAS URL for download`)
+        
+        return res.json({
+          downloadUrl: sasUrl,
+          filename: article.originalName,
+          fileType: article.fileType,
+          isDirectUrl: true
+        })
+      } catch (blobError) {
+        console.error(`❌ Error generating SAS URL:`, blobError)
+        res.status(500)
+        throw new Error('Failed to generate download URL')
+      }
+    }
+
+    // Fallback: return content as text
+    console.log(`ℹ️ No blob URL, returning content as text: ${req.params.id}`)
+    const textContent = article.content || 'No content available'
+    const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(textContent)}`
+    
+    res.json({
+      downloadUrl: dataUrl,
+      filename: `extracted-${article.originalName || 'content.txt'}`,
+      fileType: 'txt',
+      isDirectUrl: false
+    })
+
+  } catch (error) {
+    console.error(`❌ Error in getDownloadUrl:`, error)
+    throw error
+  }
 })
 
 // @desc    Get dashboard analytics
