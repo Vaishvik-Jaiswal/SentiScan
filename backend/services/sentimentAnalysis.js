@@ -2,14 +2,32 @@ import { OpenAI } from 'openai'
 
 class SentimentAnalysisService {
   constructor() {
-    this.initializeOpenAI()
+    console.log('🚀 Starting SentimentAnalysisService...')
+    
+    // Initialize OpenAI client
+    const initialized = this.initializeOpenAI()
+    console.log(`🔌 OpenAI client initialization: ${initialized ? '✅ Success' : '❌ Failed'}`)
+    
+    // If initialization failed, try again after a short delay
+    if (!initialized) {
+      console.log('🔄 Will retry OpenAI initialization in 2 seconds...')
+      setTimeout(() => {
+        const retryResult = this.initializeOpenAI()
+        console.log(`🔁 OpenAI retry initialization: ${retryResult ? '✅ Success' : '❌ Failed'}`)
+      }, 2000)
+    }
+  }
+
+  // Getter to expose OpenAI client for other services
+  get openai() {
+    return this._openai
   }
 
   initializeOpenAI() {
     // Check if Azure OpenAI is configured
     if (!process.env.AZURE_OPENAI_API_KEY || !process.env.AZURE_OPENAI_ENDPOINT) {
       console.warn('⚠️ Azure OpenAI credentials not found. Sentiment analysis will be limited.')
-      this.openai = null
+      this._openai = null
       return false
     }
 
@@ -19,6 +37,12 @@ class SentimentAnalysisService {
       console.log(`- Endpoint: ${process.env.AZURE_OPENAI_ENDPOINT}`)
       console.log(`- Deployment: ${process.env.AZURE_OPENAI_DEPLOYMENT}`)
       console.log(`- API Version: ${process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview'}`)
+      
+      // Validate required fields
+      if (!process.env.AZURE_OPENAI_DEPLOYMENT) {
+        console.error('❌ AZURE_OPENAI_DEPLOYMENT is missing in environment variables')
+        return false
+      }
       
       // Create direct configuration for Azure OpenAI
       const configuration = {
@@ -36,20 +60,34 @@ class SentimentAnalysisService {
         apiVersion: configuration.defaultQuery['api-version']
       })
       
-      this.openai = new OpenAI(configuration)
+      // Create the OpenAI client
+      this._openai = new OpenAI(configuration)
+      
+      // Test the connection with a simple request
+      console.log('🧪 Testing Azure OpenAI connection...')
+      this._openai.chat.completions.create({
+        model: process.env.AZURE_OPENAI_DEPLOYMENT,
+        messages: [{ role: 'user', content: 'Hello' }],
+        max_tokens: 5,
+      }).then(() => {
+        console.log('✅ Azure OpenAI connection test successful')
+      }).catch((error) => {
+        console.error('❌ Azure OpenAI connection test failed:', error.message)
+      })
+      
       console.log('✅ Azure OpenAI service initialized successfully')
       return true
     } catch (error) {
       console.error('❌ Failed to initialize Azure OpenAI:', error)
       console.error('❌ Error details:', error.message)
-      this.openai = null
+      this._openai = null
       return false
     }
   }
 
   async analyzeSentiment(heading, content) {
     // If OpenAI client is not initialized, try to initialize it again
-    if (!this.openai && !this.initializeOpenAI()) {
+    if (!this._openai && !this.initializeOpenAI()) {
       console.warn('⚠️ Azure OpenAI not configured, returning default sentiment')
       return {
         headingSentiment: 'Neutral',
@@ -92,7 +130,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
       console.log('📤 Sending request to Azure OpenAI...')
       console.log('📝 Using model:', process.env.AZURE_OPENAI_DEPLOYMENT)
       
-      const response = await this.openai.chat.completions.create({
+      const response = await this._openai.chat.completions.create({
         model: process.env.AZURE_OPENAI_DEPLOYMENT,
         messages: [systemPrompt, userPrompt],
         temperature: 0.1,
@@ -141,7 +179,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
 
   async batchAnalyzeSentiment(articles) {
     // If OpenAI client is not initialized, try to initialize it again
-    if (!this.openai) {
+    if (!this._openai) {
       const initialized = this.initializeOpenAI()
       if (!initialized) {
         console.warn('⚠️ Azure OpenAI not configured, batch sentiment analysis will return defaults')

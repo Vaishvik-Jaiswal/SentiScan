@@ -18,3 +18,4 @@ try {
 
 console.log('🏁 Test completed')
 process.exit(0)
+
