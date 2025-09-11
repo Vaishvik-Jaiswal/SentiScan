@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FileText, TrendingUp, Globe, Brain, Upload, BarChart3 } from 'lucide-react'
+import { FileText, TrendingUp, Globe, Brain, Upload, BarChart3, CheckCircle } from 'lucide-react'
 
 export default function Home() {
   const { user } = useAuth()
@@ -179,6 +179,83 @@ export default function Home() {
                 <p className="text-gray-600 dark:text-gray-300">
                   {item.description}
                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
+      {/* Use Cases Section */}
+      <div className="py-24 bg-gray-50 dark:bg-gray-800">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Perfect for Every Use Case
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">
+              From academic research to business intelligence
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: '🎓',
+                title: 'Academic Research',
+                description: 'Analyze research papers, surveys, and academic content across multiple languages for comprehensive studies.',
+                features: ['Multi-language analysis', 'Research-grade accuracy', 'Export capabilities']
+              },
+              {
+                icon: '💼',
+                title: 'Business Intelligence',
+                description: 'Monitor customer feedback, reviews, and social media sentiment to make data-driven decisions.',
+                features: ['Real-time processing', 'Trend analysis', 'Dashboard insights']
+              },
+              {
+                icon: '📱',
+                title: 'Social Media Monitoring',
+                description: 'Track brand sentiment across social platforms and understand customer opinions in real-time.',
+                features: ['Batch processing', 'Sentiment trends', 'Multi-platform support']
+              },
+              {
+                icon: '📰',
+                title: 'Content Analysis',
+                description: 'Analyze news articles, blog posts, and content to understand public opinion and sentiment.',
+                features: ['Document upload', 'Content classification', 'Detailed reports']
+              },
+              {
+                icon: '🏢',
+                title: 'Market Research',
+                description: 'Understand market sentiment and consumer opinions across different regions and languages.',
+                features: ['Regional insights', 'Comparative analysis', 'Market trends']
+              },
+              {
+                icon: '🎯',
+                title: 'Campaign Analysis',
+                description: 'Measure the sentiment impact of marketing campaigns and communications strategies.',
+                features: ['Campaign tracking', 'Impact measurement', 'ROI analysis']
+              }
+            ].map((useCase, index) => (
+              <div
+                key={index}
+                className="bg-white dark:bg-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="text-4xl mb-4">{useCase.icon}</div>
+                <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
+                  {useCase.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  {useCase.description}
+                </p>
+                <ul className="space-y-2">
+                  {useCase.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>

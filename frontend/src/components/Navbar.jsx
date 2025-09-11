@@ -1,208 +1,275 @@
-import { useContext, useState } from 'react'
-import { Sun, Moon, Menu, X, LogOut } from 'lucide-react'
+import { useContext, useState, useEffect } from 'react'
+import { Sun, Moon, Menu, X, LogOut, BarChart3, User, Settings } from 'lucide-react'
 import { ThemeContext } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 export default function Navbar() {
   const { theme, toggle } = useContext(ThemeContext)
   const { user, logout } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const location = useLocation()
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsOpen(false)
+    setShowUserMenu(false)
+  }, [location])
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.navbar-container')) {
+        setIsOpen(false)
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
 
   const handleLogout = () => {
     logout()
     setIsOpen(false)
+    setShowUserMenu(false)
+  }
+
+  const isActivePage = (path) => {
+    return location.pathname === path
   }
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md">
-      <div className="container mx-auto flex items-center p-4">
+    <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50 navbar-container">
+      <div className="container mx-auto flex items-center justify-between p-4">
         {/* Logo */}
         <Link
           to="/"
-          className="text-xl font-bold text-blue-600 dark:text-blue-400"
+          className="flex items-center space-x-2 text-xl font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
         >
-          SentiScan
+          <BarChart3 className="h-8 w-8" />
+          <span>SentiScan</span>
         </Link>
 
-        {/* Right side: links + toggles */}
-        <div className="ml-auto flex items-center space-x-4">
-          {/* Desktop links */}
-          <ul className="hidden md:flex space-x-8 items-center">
-            <li>
-              <Link
-                to="/"
-                className="hover:text-blue-500 dark:hover:text-blue-300"
-                onClick={() => setIsOpen(false)}
-              >
-                Home
-              </Link>
-            </li>
-            {user ? (
-              <>
-                <li>
-                  <Link
-                    to="/dashboard"
-                    className="hover:text-blue-500 dark:hover:text-blue-300"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/upload"
-                    className="hover:text-blue-500 dark:hover:text-blue-300"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Upload
-                  </Link>
-                </li>
-                <li>
-                  <span className="text-gray-700 dark:text-gray-300">
-                    Welcome, {user.username}
-                  </span>
-                </li>
-                <li>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                  >
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </button>
-                </li>
-              </>
-            ) : (
-              <>
-                <li>
-                  <Link
-                    to="/login"
-                    className="hover:text-blue-500 dark:hover:text-blue-300"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Login
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/register"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Register
-                  </Link>
-                </li>
-              </>
-            )}
-            <li>
-              <Link
-                to="/about"
-                className="hover:text-blue-500 dark:hover:text-blue-300"
-                onClick={() => setIsOpen(false)}
-              >
-                About
-              </Link>
-            </li>
-          </ul>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center space-x-8">
+          <Link
+            to="/"
+            className={`font-medium transition-colors ${
+              isActivePage('/') 
+                ? 'text-blue-600 dark:text-blue-400' 
+                : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+            }`}
+          >
+            Home
+          </Link>
+          
+          <Link
+            to="/about"
+            className={`font-medium transition-colors ${
+              isActivePage('/about') 
+                ? 'text-blue-600 dark:text-blue-400' 
+                : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+            }`}
+          >
+            About
+          </Link>
 
+          {user && (
+            <>
+              <Link
+                to="/dashboard"
+                className={`font-medium transition-colors ${
+                  isActivePage('/dashboard') 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+                }`}
+              >
+                Dashboard
+              </Link>
+              
+              <Link
+                to="/upload"
+                className={`font-medium transition-colors ${
+                  isActivePage('/upload') 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+                }`}
+              >
+                Upload
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Right side actions */}
+        <div className="flex items-center space-x-4">
           {/* Theme toggle */}
           <button
             onClick={toggle}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Toggle theme"
           >
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
 
+          {/* Desktop Auth */}
+          <div className="hidden md:flex items-center space-x-4">
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <User className="h-5 w-5" />
+                  <span className="font-medium">{user.username}</span>
+                </button>
+                
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
+                    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{user.username}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                    </div>
+                    
+                    <Link
+                      to="/dashboard"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link
+                  to="/login"
+                  className="font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Get Started
+                </Link>
+              </div>
+            )}
+          </div>
+
           {/* Mobile menu button */}
           <button
-            className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-            onClick={() => setIsOpen((o) => !o)}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
-      </div>
 
-      {/* Mobile menu */}
-      <div className={`${isOpen ? 'block' : 'hidden'} md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700`}>
-        <ul className="flex flex-col space-y-2 p-4">
-          <li>
-            <Link
-              to="/"
-              className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              onClick={() => setIsOpen(false)}
-            >
-              Home
-            </Link>
-          </li>
-          {user ? (
-            <>
-              <li>
-                <Link
-                  to="/dashboard"
-                  className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/upload"
-                  className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Upload
-                </Link>
-              </li>
-              <li>
-                <div className="px-2 py-1 text-gray-700 dark:text-gray-300">
-                  Welcome, {user.username}
+        {/* Mobile menu */}
+        {isOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+            <div className="container mx-auto px-4 py-4 space-y-4">
+              <Link
+                to="/"
+                className={`block px-3 py-2 rounded-lg font-medium transition-colors ${
+                  isActivePage('/') 
+                    ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                Home
+              </Link>
+              
+              <Link
+                to="/about"
+                className={`block px-3 py-2 rounded-lg font-medium transition-colors ${
+                  isActivePage('/about') 
+                    ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                About
+              </Link>
+
+              {user ? (
+                <>
+                  <Link
+                    to="/dashboard"
+                    className={`block px-3 py-2 rounded-lg font-medium transition-colors ${
+                      isActivePage('/dashboard') 
+                        ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  
+                  <Link
+                    to="/upload"
+                    className={`block px-3 py-2 rounded-lg font-medium transition-colors ${
+                      isActivePage('/upload') 
+                        ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Upload
+                  </Link>
+
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                      Signed in as <span className="font-medium text-gray-700 dark:text-gray-300">{user.username}</span>
+                    </div>
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 w-full px-3 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
+                  <Link
+                    to="/login"
+                    className="block w-full text-center px-4 py-2 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  
+                  <Link
+                    to="/register"
+                    className="block w-full text-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Get Started
+                  </Link>
                 </div>
-              </li>
-              <li>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition"
-                >
-                  Logout
-                </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li>
-                <Link
-                  to="/login"
-                  className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Login
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/register"
-                  className="block px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors mx-2"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Register
-                </Link>
-              </li>
-            </>
-          )}
-          <li>
-            <Link
-              to="/about"
-              className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              onClick={() => setIsOpen(false)}
-            >
-              About
-            </Link>
-          </li>
-        </ul>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   )
