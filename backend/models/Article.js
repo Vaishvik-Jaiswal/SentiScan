@@ -47,10 +47,23 @@ const articleSchema = new mongoose.Schema(
       enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
       default: 'Neutral',
     },
+    headingSentimentReason: {
+      type: String,
+      default: '',
+    },
     contentSentiment: {
       type: String,
       enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
       default: 'Neutral',
+    },
+    contentSentimentReason: {
+      type: String,
+      default: '',
+    },
+    sentimentConfidence: {
+      type: String,
+      enum: ['high', 'medium', 'low'],
+      default: 'medium',
     },
     sentimentAnalysisDate: {
       type: Date,

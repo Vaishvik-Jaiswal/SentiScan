@@ -91,7 +91,9 @@ class SentimentAnalysisService {
       console.warn('⚠️ Azure OpenAI not configured, returning default sentiment')
       return {
         headingSentiment: 'Neutral',
+        headingSentimentReason: 'Azure OpenAI not configured - using default classification',
         contentSentiment: 'Neutral',
+        contentSentimentReason: 'Azure OpenAI not configured - using default classification',
         confidence: 'low',
         error: 'Azure OpenAI not configured'
       }
@@ -107,15 +109,31 @@ class SentimentAnalysisService {
 The text may be in English, Hindi, or Gujarati. Respond in JSON format with the following structure:
 {
   "headingSentiment": "Positive|Negative|Neutral|Mixed",
-  "contentSentiment": "Positive|Negative|Neutral|Mixed",
+  "headingSentimentReason": "Brief explanation for heading classification",
+  "contentSentiment": "Positive|Negative|Neutral|Mixed", 
+  "contentSentimentReason": "Brief explanation for content classification",
   "confidence": "high|medium|low"
 }
 
-Guidelines:
-- Positive: Expresses joy, satisfaction, hope, success, or optimism
-- Negative: Expresses sadness, anger, fear, disappointment, or criticism  
-- Neutral: Factual, informative, or balanced without strong emotion
-- Mixed: Contains both positive and negative sentiments in significant portions`
+Guidelines for Classification:
+- Positive: Expresses joy, satisfaction, hope, success, optimism, achievements, celebrations, good news
+- Negative: Expresses sadness, anger, fear, disappointment, criticism, failures, disasters, bad news
+- Neutral: Factual, informative, or balanced without strong emotion, objective reporting
+- Mixed: Contains both positive and negative sentiments in significant portions
+
+Guidelines for Reasoning:
+- Keep explanations concise (1-2 sentences maximum)
+- Mention specific words, phrases, or themes that influenced the classification
+- For multilingual text, explain in English regardless of source language
+- Focus on the most impactful emotional indicators
+- For Mixed sentiment, explain what makes it both positive and negative
+- For Neutral, explain why it lacks emotional bias
+
+Examples of good reasoning:
+- "Contains celebratory language like 'success', 'achievement', and 'breakthrough' indicating positive outcomes"
+- "Uses words like 'crisis', 'failure', and 'devastating' creating a negative emotional tone"
+- "Presents factual information about statistics and data without emotional language or bias"
+- "Combines positive elements about economic growth with negative concerns about environmental impact"`
       }
 
       const userPrompt = {
@@ -134,7 +152,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         model: process.env.AZURE_OPENAI_DEPLOYMENT,
         messages: [systemPrompt, userPrompt],
         temperature: 0.1,
-        max_tokens: 150,
+        max_tokens: 300,
         response_format: { type: "json_object" }
       })
 
@@ -160,7 +178,9 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
       
       return {
         headingSentiment: sentimentData.headingSentiment || 'Neutral',
+        headingSentimentReason: sentimentData.headingSentimentReason || 'No specific reasoning provided',
         contentSentiment: sentimentData.contentSentiment || 'Neutral',
+        contentSentimentReason: sentimentData.contentSentimentReason || 'No specific reasoning provided',
         confidence: sentimentData.confidence || 'medium',
       }
     } catch (error) {
@@ -170,7 +190,9 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
       // Fallback to neutral if API fails
       return {
         headingSentiment: 'Neutral',
+        headingSentimentReason: 'Analysis failed - using default neutral classification',
         contentSentiment: 'Neutral',
+        contentSentimentReason: 'Analysis failed - using default neutral classification',
         confidence: 'low',
         error: error.message,
       }
@@ -186,7 +208,9 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         return articles.map(article => ({
           articleId: article._id,
           headingSentiment: 'Neutral',
+          headingSentimentReason: 'Azure OpenAI not configured - using default classification',
           contentSentiment: 'Neutral',
+          contentSentimentReason: 'Azure OpenAI not configured - using default classification',
           confidence: 'low',
           error: 'Azure OpenAI not configured'
         }))
@@ -215,7 +239,9 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         results.push({
           articleId: article._id,
           headingSentiment: 'Neutral',
+          headingSentimentReason: 'Analysis failed - using default neutral classification',
           contentSentiment: 'Neutral',
+          contentSentimentReason: 'Analysis failed - using default neutral classification',
           confidence: 'low',
           error: error.message,
         })

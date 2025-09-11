@@ -141,7 +141,9 @@ const processSentimentAnalysis = async (articleId) => {
     
     console.log(`✅ Sentiment analysis completed for article ${article._id}:`, {
       headingSentiment: sentiment.headingSentiment,
+      headingSentimentReason: sentiment.headingSentimentReason,
       contentSentiment: sentiment.contentSentiment,
+      contentSentimentReason: sentiment.contentSentimentReason,
       confidence: sentiment.confidence
     })
     
@@ -151,7 +153,10 @@ const processSentimentAnalysis = async (articleId) => {
     
     await Article.findByIdAndUpdate(articleId, {
       headingSentiment: sentiment.headingSentiment,
+      headingSentimentReason: sentiment.headingSentimentReason,
       contentSentiment: sentiment.contentSentiment,
+      contentSentimentReason: sentiment.contentSentimentReason,
+      sentimentConfidence: sentiment.confidence,
       sentimentAnalysisDate: new Date(),
       processingStatus: 'completed',
     })

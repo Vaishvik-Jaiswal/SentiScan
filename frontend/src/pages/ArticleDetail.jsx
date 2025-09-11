@@ -223,17 +223,23 @@ const ArticleDetail = () => {
 
         {/* Sentiment Analysis Results */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-            Sentiment Analysis Results
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Sentiment Analysis Results
+            </h2>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Heading Sentiment */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Heading Sentiment
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                <span className="bg-blue-100 dark:bg-blue-900/20 p-2 rounded-lg mr-3">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </span>
+                Heading Analysis
               </h3>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Classification
                   </span>
@@ -241,18 +247,36 @@ const ArticleDetail = () => {
                     {article.headingSentiment}
                   </span>
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 italic">
-                  "{article.heading}"
-                </p>
+                
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 italic mb-3">
+                    "{article.heading}"
+                  </p>
+                  
+                  {article.headingSentimentReason && (
+                    <div className="bg-white dark:bg-gray-600 p-3 rounded-lg border-l-4 border-blue-500">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        AI Reasoning:
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {article.headingSentimentReason}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* Content Sentiment */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Content Sentiment
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                <span className="bg-green-100 dark:bg-green-900/20 p-2 rounded-lg mr-3">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                </span>
+                Content Analysis
               </h3>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Classification
                   </span>
@@ -260,13 +284,27 @@ const ArticleDetail = () => {
                     {article.contentSentiment}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Analysis completed on{' '}
-                  {article.sentimentAnalysisDate 
-                    ? new Date(article.sentimentAnalysisDate).toLocaleString()
-                    : 'Processing...'
-                  }
-                </p>
+                
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Analysis completed on{' '}
+                    {article.sentimentAnalysisDate 
+                      ? new Date(article.sentimentAnalysisDate).toLocaleString()
+                      : 'Processing...'
+                    }
+                  </div>
+                  
+                  {article.contentSentimentReason && (
+                    <div className="bg-white dark:bg-gray-600 p-3 rounded-lg border-l-4 border-green-500">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        AI Reasoning:
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {article.contentSentimentReason}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
