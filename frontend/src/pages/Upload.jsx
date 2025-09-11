@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Type, File } from 'lucide-react'
+import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Type, File, X, Loader, Eye, BarChart3 } from 'lucide-react'
 import { articleAPI } from '../services/api'
 import { toast } from 'react-toastify'
 
@@ -10,6 +10,15 @@ const Upload = () => {
   const [textData, setTextData] = useState({ title: '', content: '', language: '' })
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [showProgressModal, setShowProgressModal] = useState(false)
+  const [processingSteps, setProcessingSteps] = useState({
+    upload: { status: 'pending', message: 'Preparing upload...' },
+    extraction: { status: 'pending', message: 'Extracting text content...' },
+    analysis: { status: 'pending', message: 'Analyzing sentiment...' },
+    completion: { status: 'pending', message: 'Finalizing results...' }
+  })
+  const [currentStep, setCurrentStep] = useState('')
+  const [articleId, setArticleId] = useState(null)
   const navigate = useNavigate()
 
   const allowedTypes = [
@@ -76,14 +85,39 @@ const Upload = () => {
         return
       }
 
+      // Reset progress and show modal
+      setProcessingSteps({
+        upload: { status: 'pending', message: 'Preparing upload...' },
+        extraction: { status: 'pending', message: 'Extracting text content...' },
+        analysis: { status: 'pending', message: 'Analyzing sentiment...' },
+        completion: { status: 'pending', message: 'Finalizing results...' }
+      })
+      setShowProgressModal(true)
       setUploading(true)
+
       try {
+        // Step 1: Upload
+        updateProcessingStep('upload', 'processing', 'Uploading file to server...')
         const result = await articleAPI.uploadArticle(file)
-        toast.success('File uploaded successfully! Processing sentiment analysis...')
-        navigate('/dashboard')
+        updateProcessingStep('upload', 'completed', 'File uploaded successfully!')
+        setArticleId(result._id)
+
+        // Step 2: Text Extraction (simulated delay for user experience)
+        updateProcessingStep('extraction', 'processing', 'Extracting text from document...')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        updateProcessingStep('extraction', 'completed', 'Text extracted successfully!')
+
+        // Step 3: Start sentiment analysis polling
+        updateProcessingStep('analysis', 'processing', 'Starting AI sentiment analysis...')
+        pollProcessingStatus(result._id)
+
       } catch (error) {
         console.error('Upload error:', error)
-        toast.error(error.response?.data?.message || 'Failed to upload file')
+        updateProcessingStep('upload', 'failed', error.response?.data?.message || 'Failed to upload file')
+        setTimeout(() => {
+          setShowProgressModal(false)
+          toast.error(error.response?.data?.message || 'Failed to upload file')
+        }, 2000)
       } finally {
         setUploading(false)
       }
@@ -93,14 +127,34 @@ const Upload = () => {
         return
       }
 
+      // Reset progress and show modal
+      setProcessingSteps({
+        upload: { status: 'pending', message: 'Creating article...' },
+        extraction: { status: 'completed', message: 'Text content ready!' },
+        analysis: { status: 'pending', message: 'Analyzing sentiment...' },
+        completion: { status: 'pending', message: 'Finalizing results...' }
+      })
+      setShowProgressModal(true)
       setUploading(true)
+
       try {
+        // Step 1: Create article
+        updateProcessingStep('upload', 'processing', 'Creating article from text...')
         const result = await articleAPI.createFromText(textData.title, textData.content, textData.language)
-        toast.success('Article created successfully! Processing sentiment analysis...')
-        navigate('/dashboard')
+        updateProcessingStep('upload', 'completed', 'Article created successfully!')
+        setArticleId(result._id)
+
+        // Step 2: Start sentiment analysis polling
+        updateProcessingStep('analysis', 'processing', 'Starting AI sentiment analysis...')
+        pollProcessingStatus(result._id)
+
       } catch (error) {
         console.error('Text upload error:', error)
-        toast.error(error.response?.data?.message || 'Failed to create article')
+        updateProcessingStep('upload', 'failed', error.response?.data?.message || 'Failed to create article')
+        setTimeout(() => {
+          setShowProgressModal(false)
+          toast.error(error.response?.data?.message || 'Failed to create article')
+        }, 2000)
       } finally {
         setUploading(false)
       }
@@ -109,6 +163,73 @@ const Upload = () => {
 
   const handleTextChange = (field, value) => {
     setTextData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const updateProcessingStep = (step, status, message) => {
+    setProcessingSteps(prev => ({
+      ...prev,
+      [step]: { status, message }
+    }))
+    setCurrentStep(step)
+  }
+
+  const pollProcessingStatus = async (articleId) => {
+    const maxAttempts = 60 // 5 minutes with 5-second intervals
+    let attempts = 0
+
+    const poll = async () => {
+      try {
+        const article = await articleAPI.getArticleById(articleId)
+        
+        if (article.processingStatus === 'completed') {
+          updateProcessingStep('completion', 'completed', 'Analysis completed successfully!')
+          setTimeout(() => {
+            setShowProgressModal(false)
+            toast.success('Article analyzed successfully!')
+            navigate(`/article/${articleId}`)
+          }, 1500)
+          return
+        } else if (article.processingStatus === 'failed') {
+          updateProcessingStep('completion', 'failed', 'Analysis failed. Please try again.')
+          setTimeout(() => {
+            setShowProgressModal(false)
+            toast.error('Analysis failed. Please try again.')
+          }, 2000)
+          return
+        } else if (article.processingStatus === 'processing') {
+          updateProcessingStep('analysis', 'processing', 'AI is analyzing sentiment...')
+        }
+
+        // Continue polling if still processing
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000) // Poll every 5 seconds
+        } else {
+          // Timeout after 5 minutes
+          updateProcessingStep('completion', 'failed', 'Processing timeout. Please check dashboard.')
+          setTimeout(() => {
+            setShowProgressModal(false)
+            toast.warning('Processing is taking longer than expected. Check your dashboard for updates.')
+            navigate('/dashboard')
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('Error polling status:', error)
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000)
+        } else {
+          updateProcessingStep('completion', 'failed', 'Error checking status. Please check dashboard.')
+          setTimeout(() => {
+            setShowProgressModal(false)
+            navigate('/dashboard')
+          }, 2000)
+        }
+      }
+    }
+
+    // Start polling after a short delay
+    setTimeout(poll, 2000)
   }
 
   const formatFileSize = (bytes) => {
@@ -136,6 +257,27 @@ const Upload = () => {
         return '🖼️'
       default:
         return '📄'
+    }
+  }
+
+  const getStepIcon = (step, status) => {
+    const icons = {
+      upload: UploadIcon,
+      extraction: FileText,
+      analysis: BarChart3,
+      completion: CheckCircle
+    }
+    
+    const IconComponent = icons[step]
+    
+    if (status === 'completed') {
+      return <CheckCircle className="h-5 w-5 text-green-500" />
+    } else if (status === 'processing') {
+      return <Loader className="h-5 w-5 text-blue-500 animate-spin" />
+    } else if (status === 'failed') {
+      return <AlertCircle className="h-5 w-5 text-red-500" />
+    } else {
+      return <IconComponent className="h-5 w-5 text-gray-400" />
     }
   }
 
@@ -345,7 +487,7 @@ const Upload = () => {
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <p className="font-medium mb-1">What happens after upload:</p>
                 <ul className="space-y-1">
-                  <li>1. Your file is securely stored in Azure Blob Storage</li>
+                  <li>1. Your file is securely stored</li>
                   <li>2. Text is extracted from the document</li>
                   <li>3. AI analyzes the sentiment of the heading and content</li>
                   <li>4. Results are displayed in your dashboard</li>
@@ -355,6 +497,110 @@ const Upload = () => {
           </div>
         </div>
       </div>
+
+      {/* Progress Modal */}
+      {showProgressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div className="p-8">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div className="bg-blue-100 dark:bg-blue-900/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  Processing Your Article
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Please wait while we analyze your content
+                </p>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="space-y-4 mb-8">
+                {Object.entries(processingSteps).map(([step, { status, message }]) => (
+                  <div key={step} className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
+                    status === 'processing' ? 'bg-blue-50 dark:bg-blue-900/20' :
+                    status === 'completed' ? 'bg-green-50 dark:bg-green-900/20' :
+                    status === 'failed' ? 'bg-red-50 dark:bg-red-900/20' :
+                    'bg-gray-50 dark:bg-gray-700'
+                  }`}>
+                    <div className="flex-shrink-0">
+                      {getStepIcon(step, status)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${
+                        status === 'processing' ? 'text-blue-700 dark:text-blue-300' :
+                        status === 'completed' ? 'text-green-700 dark:text-green-300' :
+                        status === 'failed' ? 'text-red-700 dark:text-red-300' :
+                        'text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {message}
+                      </p>
+                    </div>
+                    {status === 'completed' && (
+                      <div className="flex-shrink-0">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Current Progress */}
+              <div className="mb-6">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <span>Progress</span>
+                  <span>
+                    {Object.values(processingSteps).filter(step => step.status === 'completed').length} / {Object.keys(processingSteps).length}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${(Object.values(processingSteps).filter(step => step.status === 'completed').length / Object.keys(processingSteps).length) * 100}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                {processingSteps.completion.status === 'completed' && articleId && (
+                  <button
+                    onClick={() => {
+                      setShowProgressModal(false)
+                      navigate(`/article/${articleId}`)
+                    }}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>View Results</span>
+                  </button>
+                )}
+                
+                {(processingSteps.completion.status === 'failed' || processingSteps.upload.status === 'failed') && (
+                  <button
+                    onClick={() => setShowProgressModal(false)}
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <X className="h-4 w-4" />
+                    <span>Close</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Tips */}
+              <div className="mt-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                  💡 <strong>Tip:</strong> Larger files may take longer to process. We'll notify you when it's ready!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

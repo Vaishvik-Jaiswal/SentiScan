@@ -45,10 +45,33 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [pagination, setPagination] = useState(null)
+  const [autoRefreshing, setAutoRefreshing] = useState(false)
 
   useEffect(() => {
     fetchData()
   }, [currentPage])
+
+  // Auto-refresh when there are processing articles
+  useEffect(() => {
+    const hasProcessingArticles = articles.some(article => 
+      article.processingStatus === 'processing' || article.processingStatus === 'pending'
+    )
+
+    if (hasProcessingArticles) {
+      setAutoRefreshing(true)
+      const interval = setInterval(async () => {
+        console.log('Auto-refreshing dashboard due to processing articles...')
+        await fetchData()
+      }, 10000) // Refresh every 10 seconds
+
+      return () => {
+        clearInterval(interval)
+        setAutoRefreshing(false)
+      }
+    } else {
+      setAutoRefreshing(false)
+    }
+  }, [articles])
 
   const fetchData = async () => {
     setLoading(true)
@@ -210,13 +233,21 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-            <button
-              onClick={fetchData}
+                <button
+                  onClick={fetchData}
                   className="flex items-center justify-center space-x-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl transition-all duration-200 hover:shadow-lg transform hover:scale-105"
-            >
-                  <RefreshCw className="h-5 w-5" />
-                  <span className="font-medium">Refresh Data</span>
-            </button>
+                >
+                  <RefreshCw className={`h-5 w-5 ${autoRefreshing ? 'animate-spin' : ''}`} />
+                  <span className="font-medium">
+                    {autoRefreshing ? 'Auto-Refreshing...' : 'Refresh Data'}
+                  </span>
+                </button>
+                {autoRefreshing && (
+                  <div className="flex items-center space-x-2 px-4 py-3 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium">Processing articles...</span>
+                  </div>
+                )}
             <Link
               to="/upload"
                   className="flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl transition-all duration-200 hover:shadow-lg transform hover:scale-105 font-medium"
