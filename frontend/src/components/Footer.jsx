@@ -8,7 +8,8 @@ import {
   Shield, 
   Globe,
   Heart,
-  ExternalLink
+  ExternalLink,
+  Bot
 } from 'lucide-react'
 
 export default function Footer() {
@@ -66,12 +67,41 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <BarChart3 className="h-8 w-8 text-blue-400" />
-              <span className="text-2xl font-bold">SentiScan</span>
+              {/* <BarChart3 className="h-8 w-8 text-blue-400" />
+              <span className="text-2xl font-bold">SentiScan</span> */}
+              <Link
+          to="/"
+          className="flex items-center space-x-2 text-xl font-bold transition-colors"
+        >
+          <BarChart3 className="h-8 w-8 text-blue-400" />
+          <div className="flex flex-col">
+            <span className='hover:text-blue-400 dark:hover:text-blue-300'>SentiScan</span>
+            <div className="flex items-center space-x-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+              <span>Powered by</span>
+              <a
+                href="https://ailifebot.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src="/ailifebot_logo.png"
+                  alt="AI LifeBot"
+                  className="h-4 w-auto"
+                  onError={(e) => {
+                    // Fallback to Bot icon if image fails to load
+                    e.target.style.display = 'none'
+                    e.target.nextElementSibling.style.display = 'inline'
+                  }}
+                />
+              </a>
+            </div>
+          </div>
+        </Link>
             </div>
             <p className="text-gray-300 mb-6 max-w-md">
               AI-powered multilingual sentiment analysis platform. Analyze emotions and opinions 
-              in documents with cutting-edge Azure OpenAI technology.
+              in documents with cutting-edge technology.
             </p>
             
             {/* Features Icons */}
@@ -82,7 +112,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Globe className="h-4 w-4 text-green-400" />
-                <span>3 Languages</span>
+                <span>Multilingual</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Shield className="h-4 w-4 text-red-400" />
@@ -91,7 +121,7 @@ export default function Footer() {
             </div>
 
             {/* Social Links */}
-            <div className="flex space-x-4">
+            {/* <div className="flex space-x-4">
               {socialLinks.map((social, index) => (
                 <a
                   key={index}
@@ -104,7 +134,7 @@ export default function Footer() {
                   {social.icon}
                 </a>
               ))}
-            </div>
+            </div> */}
           </div>
 
           {/* Product Links */}
@@ -193,37 +223,38 @@ export default function Footer() {
             </div>
             
             <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 text-sm text-gray-400">
-              <div className="flex items-center space-x-1">
-                <span>Made with</span>
-                <Heart className="h-4 w-4 text-red-500" />
-                <span>by</span>
+              <div className="flex items-center space-x-2">
+                <span>Powered by</span>
                 <a
-                  href="https://kshitij-kashyap-portfolio.netlify.app/"
+                  href="https://ailifebot.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                  className="flex items-center space-x-1 hover:opacity-80 transition-opacity group"
                 >
-                  Kshitij Kashyap
+                  <img
+                    src="/ailifebot_logo.png"
+                    alt="AI LifeBot"
+                    className="h-5 w-auto"
+                    onError={(e) => {
+                      // Fallback to Bot icon if image fails to load
+                      e.target.style.display = 'none'
+                      e.target.nextElementSibling.style.display = 'inline'
+                    }}
+                  />
+                  <Bot className="h-4 w-4 hidden" />
                 </a>
-              </div>
-              
-              <div className="flex items-center space-x-4 text-xs">
-                <span className="px-2 py-1 bg-gray-800 rounded">React</span>
-                <span className="px-2 py-1 bg-gray-800 rounded">Node.js</span>
-                <span className="px-2 py-1 bg-gray-800 rounded">Azure AI</span>
-                <span className="px-2 py-1 bg-gray-800 rounded">Tailwind</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Status Indicator */}
-        <div className="mt-6 text-center">
+        {/* <div className="mt-6 text-center">
           <div className="inline-flex items-center space-x-2 px-3 py-1 bg-green-900/20 border border-green-800 rounded-full text-green-400 text-xs">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span>All systems operational</span>
           </div>
-        </div>
+        </div> */}
       </div>
     </footer>
   )
