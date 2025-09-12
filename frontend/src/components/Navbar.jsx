@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect } from 'react'
-import { Sun, Moon, Menu, X, LogOut, BarChart3, User, Settings } from 'lucide-react'
+import { Sun, Moon, Menu, X, LogOut, BarChart3, User, Settings, Bot } from 'lucide-react'
 import { ThemeContext } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { Link, useLocation } from 'react-router-dom'
@@ -49,7 +49,29 @@ export default function Navbar() {
           className="flex items-center space-x-2 text-xl font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
         >
           <BarChart3 className="h-8 w-8" />
-          <span>SentiScan</span>
+          <div className="flex flex-col">
+            <span>SentiScan</span>
+            <div className="flex items-center space-x-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+              <span>Powered by</span>
+              <a
+                href="https://ailifebot.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src="/ailifebot_logo_1.png"
+                  alt="AI LifeBot"
+                  className="h-4 w-auto"
+                  onError={(e) => {
+                    // Fallback to Bot icon if image fails to load
+                    e.target.style.display = 'none'
+                    e.target.nextElementSibling.style.display = 'inline'
+                  }}
+                />
+              </a>
+            </div>
+          </div>
         </Link>
 
         {/* Desktop Navigation */}
