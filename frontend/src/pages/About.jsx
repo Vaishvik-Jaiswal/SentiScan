@@ -11,7 +11,9 @@ import {
   FileText,
   BarChart3,
   Languages,
-  Cloud
+  Cloud,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react'
 import HelpFAQ from '../components/HelpFAQ'
 
@@ -39,37 +41,43 @@ export default function About() {
     }
   ]
 
-  const stats = [
-    { number: '10,000+', label: 'Documents Analyzed', icon: <FileText className="h-6 w-6" /> },
-    { number: '3', label: 'Languages Supported', icon: <Globe className="h-6 w-6" /> },
-    { number: '99.9%', label: 'Uptime Guarantee', icon: <Zap className="h-6 w-6" /> },
-    { number: '500+', label: 'Happy Users', icon: <Users className="h-6 w-6" /> }
-  ]
-
   return (
     <main className="flex-1">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-teal-600 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-extrabold mb-6">
+      {/* Enhanced Hero Section */}
+      <div className="relative bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white py-32 overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+          <div className="absolute top-0 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-teal-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        </div>
+        
+        <div className="relative container mx-auto px-4 text-center">
+          <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/90 text-sm font-medium mb-8 border border-white/20">
+            <Sparkles className="h-4 w-4 mr-2 text-yellow-400" />
             About SentiScan
+          </div>
+          
+          <h1 className="text-5xl lg:text-7xl font-black mb-8 leading-tight">
+            <span className="block">Transforming Sentiment Analysis</span>
           </h1>
-          <p className="text-xl mb-8 max-w-3xl mx-auto opacity-90">
-            Empowering businesses and researchers with AI-driven multilingual sentiment analysis. 
-            We make understanding emotions in text simple, accurate, and accessible.
+          
+          <p className="text-2xl mb-8 opacity-90 max-w-3xl mx-auto leading-relaxed">
+            Empowering with AI-driven multilingual sentiment analysis
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-              <Award className="h-5 w-5" />
-              <span>AI-Powered</span>
+          
+          <div className="flex flex-wrap justify-center gap-6 mb-16">
+            <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20">
+              <Award className="h-6 w-6 text-yellow-400" />
+              <span className="font-medium">AI-Powered</span>
             </div>
-            <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-              <Globe className="h-5 w-5" />
-              <span>Multilingual</span>
+            <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20">
+              <Globe className="h-6 w-6 text-green-400" />
+              <span className="font-medium">Multilingual</span>
             </div>
-            <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-              <Shield className="h-5 w-5" />
-              <span>Secure</span>
+            <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20">
+              <Shield className="h-6 w-6 text-blue-400" />
+              <span className="font-medium">Enterprise Secure</span>
             </div>
           </div>
         </div>

@@ -294,3 +294,4 @@ export default function HelpFAQ({ variant = "full" }) {
     </div>
   )
 }
+
