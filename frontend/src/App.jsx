@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import Home from './pages/Home'
@@ -13,6 +14,7 @@ import Dashboard from './pages/Dashboard'
 import Upload from './pages/Upload'
 import ArticleDetail from './pages/ArticleDetail'
 import About from './pages/About'
+import AdminDashboard from './pages/AdminDashboard'
 
 export default function App() {
   return (
@@ -50,6 +52,14 @@ export default function App() {
                 } 
               />
               <Route path="/about" element={<About />} />
+              <Route 
+                path="/admin" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                } 
+              />
             </Routes>
             <Footer />
           </div>

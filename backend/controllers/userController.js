@@ -29,6 +29,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       _id: user._id,
       username: user.username,
       email: user.email,
+      role: user.role,
       token: generateToken(user._id),
     })
   } else {
@@ -51,10 +52,16 @@ export const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ username })
 
   if (user && (await user.matchPassword(password))) {
+    if (!user.isActive) {
+      res.status(403)
+      throw new Error('Account is deactivated. Please contact administrator.')
+    }
+
     res.json({
       _id: user._id,
       username: user.username,
       email: user.email,
+      role: user.role,
       token: generateToken(user._id),
     })
   } else {
@@ -74,6 +81,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
       _id: user._id,
       username: user.username,
       email: user.email,
+      role: user.role,
     })
   } else {
     res.status(404)

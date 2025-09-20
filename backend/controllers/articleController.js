@@ -209,10 +209,18 @@ export const getUserArticles = asyncHandler(async (req, res) => {
 // @route   GET /api/articles/:id
 // @access  Private
 export const getArticleById = asyncHandler(async (req, res) => {
-  const article = await Article.findOne({
-    _id: req.params.id,
-    userId: req.user._id,
-  })
+  let article
+  
+  // If user is admin, allow access to any article
+  if (req.user.role === 'admin') {
+    article = await Article.findById(req.params.id)
+  } else {
+    // Regular users can only access their own articles
+    article = await Article.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    })
+  }
 
   if (!article) {
     res.status(404)
@@ -228,10 +236,18 @@ export const getArticleById = asyncHandler(async (req, res) => {
 export const deleteArticle = asyncHandler(async (req, res) => {
   console.log(`🗑️ Delete request for article ID: ${req.params.id}`)
   
-  const article = await Article.findOne({
-    _id: req.params.id,
-    userId: req.user._id,
-  })
+  let article
+  
+  // If user is admin, allow deletion of any article
+  if (req.user.role === 'admin') {
+    article = await Article.findById(req.params.id)
+  } else {
+    // Regular users can only delete their own articles
+    article = await Article.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    })
+  }
 
   if (!article) {
     console.log(`❌ Article not found: ${req.params.id}`)

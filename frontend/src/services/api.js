@@ -107,4 +107,64 @@ export const userAPI = {
   },
 }
 
+// Admin API functions
+export const adminAPI = {
+  // Get admin dashboard overview
+  getOverview: async () => {
+    const response = await api.get('/api/admin/overview')
+    return response.data
+  },
+
+  // Get system statistics
+  getSystemStats: async () => {
+    const response = await api.get('/api/admin/stats')
+    return response.data
+  },
+
+  // Get all users
+  getAllUsers: async (page = 1, limit = 20, search = '', role = 'all', status = 'all') => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      search,
+      role,
+      status
+    })
+    const response = await api.get(`/api/admin/users?${params}`)
+    return response.data
+  },
+
+  // Get user details
+  getUserDetails: async (userId) => {
+    const response = await api.get(`/api/admin/users/${userId}`)
+    return response.data
+  },
+
+  // Toggle user status
+  toggleUserStatus: async (userId) => {
+    const response = await api.patch(`/api/admin/users/${userId}/toggle-status`)
+    return response.data
+  },
+
+  // Get all articles
+  getAllArticles: async (page = 1, limit = 20, search = '', status = 'all', language = 'all', sentiment = 'all') => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      search,
+      status,
+      language,
+      sentiment
+    })
+    const response = await api.get(`/api/admin/articles?${params}`)
+    return response.data
+  },
+
+  // Delete article
+  deleteArticle: async (articleId) => {
+    const response = await api.delete(`/api/admin/articles/${articleId}`)
+    return response.data
+  }
+}
+
 export default api

@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect } from 'react'
-import { Sun, Moon, Menu, X, LogOut, BarChart3, User, Settings, Bot } from 'lucide-react'
+import { Sun, Moon, Menu, X, LogOut, BarChart3, User, Settings, Bot, Shield } from 'lucide-react'
 import { ThemeContext } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { Link, useLocation } from 'react-router-dom'
@@ -121,6 +121,19 @@ export default function Navbar() {
               >
                 Upload
               </Link>
+
+              {user.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  className={`flex items-center space-x-1 font-medium transition-colors ${
+                    isActivePage('/admin') 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+                  }`}
+                >
+                  <span>Admin</span>
+                </Link>
+              )}
             </>
           )}
         </div>
@@ -163,6 +176,17 @@ export default function Navbar() {
                       <BarChart3 className="h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
+                    
+                    {user.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Shield className="h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    )}
                     
                     <button
                       onClick={handleLogout}

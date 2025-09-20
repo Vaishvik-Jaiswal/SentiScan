@@ -125,17 +125,22 @@ export default function Dashboard() {
   }
 
   // Chart configurations
+  const getChartSentimentColor = (sentiment) => {
+    switch (sentiment?.toLowerCase()) {
+      case 'positive': return '#10B981' // Green for Positive
+      case 'negative': return '#EF4444' // Red for Negative
+      case 'neutral': return '#6B7280'  // Gray for Neutral
+      case 'mixed': return '#F59E0B'    // Yellow for Mixed
+      default: return '#9CA3AF'         // Default gray
+    }
+  }
+
   const sentimentDistributionData = {
     labels: analytics?.sentimentDistribution?.map(item => item._id) || [],
     datasets: [
       {
         data: analytics?.sentimentDistribution?.map(item => item.count) || [],
-        backgroundColor: [
-          '#10B981', // Green for Positive
-          '#EF4444', // Red for Negative
-          '#6B7280', // Gray for Neutral
-          '#F59E0B', // Yellow for Mixed
-        ],
+        backgroundColor: analytics?.sentimentDistribution?.map(item => getChartSentimentColor(item._id)) || [],
         borderWidth: 2,
         borderColor: '#ffffff',
       },
