@@ -149,7 +149,14 @@ class AzureStorageService {
       const blockBlobClient = containerClient.getBlockBlobClient(blobName)
       
       const downloadResponse = await blockBlobClient.download()
-      return downloadResponse.readableStreamBody
+      
+      // Convert stream to buffer
+      const chunks = []
+      for await (const chunk of downloadResponse.readableStreamBody) {
+        chunks.push(chunk)
+      }
+      
+      return Buffer.concat(chunks)
     } catch (error) {
       console.error('❌ Error downloading file from Azure Blob Storage:', error)
       throw error

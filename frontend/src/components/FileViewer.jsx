@@ -126,14 +126,16 @@ const FileViewer = ({ article, className = "" }) => {
       setError('No file available for viewing')
       setLoading(false)
     }
+  }, [article?._id]) // Only depend on article ID, not the fileUrl
 
-    // Cleanup blob URLs on unmount to prevent memory leaks
+  // Separate cleanup effect
+  useEffect(() => {
     return () => {
       if (fileUrl && fileUrl.startsWith('blob:')) {
         URL.revokeObjectURL(fileUrl)
       }
     }
-  }, [article, fileUrl])
+  }, [fileUrl])
 
   const generateFileUrl = async () => {
     try {
@@ -148,9 +150,7 @@ const FileViewer = ({ article, className = "" }) => {
       
       // Always fetch the file content first
       try {
-        console.log(`🔄 Fetching file: ${article._id}, type: ${fileType}`)
-        
-        // Use responseType: 'blob' for all file types
+        // Fetch file with minimal logging
         const response = await axios.get(
           `${import.meta.env.VITE_BACKEND_URL}/api/articles/${article._id}/file`,
           {
@@ -161,19 +161,11 @@ const FileViewer = ({ article, className = "" }) => {
           }
         )
         
-        console.log(`✅ Received response:`, {
-          status: response.status,
-          contentType: response.headers['content-type'],
-          size: response.data.size
-        })
-        
         // Check if we received OCR text content instead of the original file
         const contentType = response.headers['content-type'] || 'application/octet-stream'
         
         if (contentType.includes('text/plain') && article.fileType !== 'txt') {
           // We got OCR text instead of the original file
-          console.log(`ℹ️ Received OCR text instead of original ${fileType} file`)
-          
           // Read the blob as text
           const reader = new FileReader()
           reader.onload = (e) => {
@@ -199,8 +191,6 @@ const FileViewer = ({ article, className = "" }) => {
         const blob = new Blob([response.data], { type: contentType })
         const url = URL.createObjectURL(blob)
         
-        console.log(`📎 Created blob URL: ${url.substring(0, 50)}...`)
-        
         setFileUrl(url)
         setLoading(false)
       } catch (fetchError) {
@@ -214,7 +204,6 @@ const FileViewer = ({ article, className = "" }) => {
         if (fetchError.response?.status === 404) {
           // Try to display article content directly if file not found
           if (article.content) {
-            console.log(`ℹ️ File not found, using article.content directly`)
             const blob = new Blob([article.content], { type: 'text/plain' })
             const url = URL.createObjectURL(blob)
             setFileUrl(url)
@@ -231,7 +220,6 @@ const FileViewer = ({ article, className = "" }) => {
         
         // If we have article content, use it as fallback
         if (article.content) {
-          console.log(`ℹ️ Using article.content as fallback`)
           const blob = new Blob([article.content], { type: 'text/plain' })
           const url = URL.createObjectURL(blob)
           setFileUrl(url)

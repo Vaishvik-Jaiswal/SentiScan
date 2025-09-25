@@ -373,22 +373,24 @@ export const serveArticleFile = asyncHandler(async (req, res) => {
         }
 
         try {
-          console.log(`☁️ Generating SAS URL for Azure blob: ${article.filename}`)
-          const sasUrl = await azureStorage.generateSasUrl(article.filename)
-          console.log(`✅ Generated SAS URL, redirecting...`)
+          console.log(`☁️ Downloading blob content for: ${article.filename}`)
+          const blobBuffer = await azureStorage.downloadFile(article.filename)
+          console.log(`✅ Downloaded blob content, streaming to client...`)
           
-          // Set appropriate headers before redirecting
+          // Set appropriate headers for direct content serving
           res.set({
             'Content-Type': contentType,
+            'Content-Length': blobBuffer.length,
+            'Content-Disposition': `inline; filename="${article.originalName || 'file'}"`,
             'Cache-Control': 'public, max-age=3600',
             'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:5173',
             'Access-Control-Allow-Methods': 'GET',
             'Access-Control-Allow-Headers': 'Authorization, Content-Type'
           })
           
-          return res.redirect(sasUrl)
+          return res.send(blobBuffer)
         } catch (blobError) {
-          console.error(`❌ Error generating SAS URL:`, blobError)
+          console.error(`❌ Error downloading blob content:`, blobError)
           
           // Fall back to serving OCR content
           console.log(`ℹ️ Falling back to serving OCR content`)
