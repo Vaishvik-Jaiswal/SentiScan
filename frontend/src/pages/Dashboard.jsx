@@ -277,7 +277,7 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   {analytics?.totalArticles || 0}
                 </p>
-                <div className="flex items-center text-xs text-green-600">
+                <div className="flex items-center text-xs text-blue-600">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   <span>All time</span>
                 </div>

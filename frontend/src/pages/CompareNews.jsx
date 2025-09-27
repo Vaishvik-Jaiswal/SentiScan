@@ -1190,12 +1190,12 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                   <Trash2 className="h-4 w-4" />
                   <span>Delete</span>
                 </button>
-                <button
+                {/* <button
                   onClick={() => navigate('/compare-news')}
                   className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg transition-colors"
                 >
                   ← Back to List
-                </button>
+                </button> */}
                 <button
                   onClick={onStartNew}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
