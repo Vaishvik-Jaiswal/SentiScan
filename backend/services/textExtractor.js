@@ -5,13 +5,43 @@ import sharp from 'sharp'
 import sentimentAnalysis from './sentimentAnalysis.js'
 
 // Test imports on startup
-console.log('📚 Text extractor service loading...')
+console.log('📚 Enhanced text extractor service loading...')
 console.log('📄 PDF parser available:', typeof pdfParse)
 console.log('📝 Mammoth available:', typeof mammoth)
 console.log('🖼️ Tesseract OCR available:', typeof Tesseract)
 console.log('🖼️ Sharp image processor available:', typeof sharp)
 
 class TextExtractorService {
+  constructor() {
+    // Initialize Tesseract worker pool for better performance
+    this.workerPool = new Map()
+    this.maxWorkers = 2
+    this.currentWorker = 0
+  }
+
+  async getOrCreateWorker(language = 'eng+hin+guj') {
+    const workerId = `worker_${this.currentWorker}`
+    
+    if (!this.workerPool.has(workerId)) {
+      console.log(`🔧 Creating new Tesseract worker: ${workerId} with languages: ${language}`)
+      const worker = await Tesseract.createWorker(language, 1, {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            console.log(`📊 OCR Progress (${workerId}): ${Math.round(m.progress * 100)}%`)
+          }
+        },
+        // Initialize with proper parameters
+        tessedit_pageseg_mode: '1', // Automatic page segmentation with OSD
+        tessedit_ocr_engine_mode: '1', // LSTM neural networks
+        preserve_interword_spaces: '1', // Preserve spacing
+      })
+      this.workerPool.set(workerId, worker)
+    }
+    
+    this.currentWorker = (this.currentWorker + 1) % this.maxWorkers
+    return this.workerPool.get(workerId)
+  }
+
   async extractText(buffer, fileType, originalName) {
     console.log(`📄 Extracting text from ${fileType} file: ${originalName}`)
     
@@ -46,6 +76,8 @@ class TextExtractorService {
         case 'gif':
         case 'bmp':
         case 'webp':
+        case 'tiff':
+        case 'tif':
           console.log(`🖼️ Processing ${fileType.toUpperCase()} image file...`)
           extractedText = await this.extractTextFromImage(buffer, fileType)
           console.log(`✅ OCR extracted: ${extractedText.length} characters`)
@@ -105,7 +137,7 @@ class TextExtractorService {
       const lines = text.split('\n').filter(line => line.trim().length > 0)
       if (lines.length === 0) return 'Untitled'
       
-      // OCR-specific patterns to skip
+      // Enhanced OCR-specific patterns to skip
       const skipPatterns = [
         /main paper/i,
         /page[-\s]*\d+/i,
@@ -118,19 +150,20 @@ class TextExtractorService {
         /business/i,
         /entertainment/i,
         /^[a-z\s]+\|/i, // Text followed by |
-        /thehitavada|times of india|hindustan times|indian express|hindu|telegraph/i,
+        /thehitavada|times of india|hindustan times|indian express|hindu|telegraph|gujarat samachar|sandesh|divya bhaskar/i,
         /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/, // Dates
-        /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i, // Days
+        /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday|સોમવાર|મંગળવાર|બુધવાર|ગુરુવાર|શુક્રવાર|શનિવાર|રવિવાર)/i, // Days
         /^[A-Z][a-z]+,?\s*\d{1,2}/, // Location with date
         /^[A-Z][a-z]+:\s*/, // Location with colon
-        /NEW DELHI/i,
-        /PTI/i,
-        /ANI/i,
+        /NEW DELHI|AHMEDABAD|GANDHINAGAR|RAJKOT|SURAT|નવી દિલ્હી|અમદાવાદ|ગાંધીનગર/i,
+        /PTI|ANI|UNI/i,
         /^[A-Z]+,/i, // City names in all caps followed by comma
+        /^\s*\d+\s*$/, // Just numbers
+        /^[^\w\u0900-\u097F\u0A80-\u0AFF]+$/, // Only punctuation
       ]
       
       // Try to find a good heading by analyzing more lines
-      for (let i = 0; i < Math.min(lines.length, 20); i++) {
+      for (let i = 0; i < Math.min(lines.length, 25); i++) {
         let line = lines[i].trim()
         
         // Skip if too short or too long
@@ -149,7 +182,7 @@ class TextExtractorService {
           continue
         }
         
-        // For Hindi/Gujarati content, look for Devanagari/Gujarati script
+        // Language-specific headline detection
         if (detectedLanguage === 'hindi' || detectedLanguage === 'gujarati') {
           const hasDevanagari = /[\u0900-\u097F]/.test(line)
           const hasGujarati = /[\u0A80-\u0AFF]/.test(line)
@@ -161,11 +194,12 @@ class TextExtractorService {
             return heading
           }
         } else {
-          // For English content, look for proper headline structure
-          const hasActionWords = /\b(announces?|launches?|wins?|loses?|introduces?|reveals?|confirms?|denies?|reports?|says?|claims?|begins?|ends?|starts?|completes?)\b/i.test(line)
+          // Enhanced English headline detection
+          const hasActionWords = /\b(announces?|launches?|wins?|loses?|introduces?|reveals?|confirms?|denies?|reports?|says?|claims?|begins?|ends?|starts?|completes?|approves?|rejects?|implements?|inaugurates?|celebrates?)\b/i.test(line)
           const hasProperStructure = /^[A-Z].*[a-z].*/.test(line) && line.split(' ').length >= 3
+          const hasNewsIndicators = /\b(government|minister|president|prime|chief|committee|court|supreme|high|parliament|assembly|budget|policy|scheme|project|program|initiative)\b/i.test(line)
           
-          if (hasActionWords || hasProperStructure) {
+          if (hasActionWords || (hasProperStructure && hasNewsIndicators) || hasProperStructure) {
             const heading = line.length > 100 ? line.substring(0, 100) + '...' : line
             console.log(`✅ Fallback found English heading: "${heading}"`)
             return heading
@@ -174,7 +208,7 @@ class TextExtractorService {
       }
       
       // Last resort: use first non-skipped line
-      for (let i = 0; i < Math.min(lines.length, 20); i++) {
+      for (let i = 0; i < Math.min(lines.length, 25); i++) {
         let line = lines[i].trim()
         if (line.length >= 15 && line.length <= 150) {
           const shouldSkip = skipPatterns.some(pattern => pattern.test(line))
@@ -186,8 +220,8 @@ class TextExtractorService {
         }
       }
       
-      // Absolute last resort: use first line but warn
-      const lastResort = lines[0].trim()
+      // Absolute last resort: use first meaningful line
+      const lastResort = lines.find(line => line.trim().length > 10)?.trim()
       console.log(`⚠️ Fallback last resort: "${lastResort}"`)
       return lastResort || 'Untitled'
     }
@@ -219,7 +253,7 @@ class TextExtractorService {
         languageSpecificInstructions = `
 - The article appears to be in Gujarati script
 - EXTRACT THE HEADLINE IN GUJARATI, not English
-- Look for Gujarati text that appears to be a headline
+- Look for Gujarati text (ગુજરાતી) that appears to be a headline
 - Return the headline in the original Gujarati language
 - Do not transliterate or translate the headline to English`
       } else {
@@ -237,11 +271,12 @@ CRITICAL INSTRUCTIONS:
 1. IGNORE completely (these are NOT headlines):
    - "NEW DELHI, Sept 5 (PTI)" or any similar location/date/agency patterns
    - "Main Paper Nagpur | 2025-00406 | Page-3" or any page/issue numbers
-   - Newspaper names like "TheHitavada", "Times of India", etc.
+   - Newspaper names like "TheHitavada", "Times of India", "Gujarat Samachar", "Sandesh", etc.
    - Section headers like "SPORTS", "POLITICS", "BREAKING NEWS"
    - Bylines like "By Our Staff Reporter"
-   - Any text containing "PTI", "ANI" or news agency abbreviations
+   - Any text containing "PTI", "ANI", "UNI" or news agency abbreviations
    - Page numbers, dates, or location headers
+   - City names like "અમદાવાદ", "ગાંધીનગર", "AHMEDABAD", "GANDHINAGAR"
 
 2. LANGUAGE SPECIFIC INSTRUCTIONS:${languageSpecificInstructions}
 
@@ -265,7 +300,7 @@ Output: PM launches new welfare scheme for farmers
 Input: "TheHitavada\nNagpur, Monday\nसरकार ने किसानों के लिए नई योजना की घोषणा की\nकृषि मंत्री ने कहा कि..."
 Output: सरकार ने किसानों के लिए नई योजना की घोषणा की
 
-Input: "Main Paper | 2025-00406 | Page 3\nભારત સરકાર દ્વારા નવી શિક્ષણ નીતિ જાહેર\nગુજરાત રાજ્યમાં..."
+Input: "Gujarat Samachar | અમદાવાد | પેજ-3\nભારત સરકાર દ્વારા નવી શિક્ષણ નીતિ જાહેર\nગુજરાત રાજ્યમાં..."
 Output: ભારત સરકાર દ્વારા નવી શિક્ષણ નીતિ જાહેર
 
 REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article content.`
@@ -279,12 +314,11 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       console.log('📤 Sending heading extraction request to Azure OpenAI...')
       console.log('📝 Text sample (first 200 chars):', textSample.substring(0, 200) + '...')
       
-      // Make sure to use the correct endpoint and API key
       const response = await openaiClient.chat.completions.create({
         model: process.env.AZURE_OPENAI_DEPLOYMENT,
         messages: [systemPrompt, userPrompt],
         temperature: 0.1,
-        max_tokens: 200, // Increased for longer headlines in non-Latin scripts
+        max_tokens: 250, // Increased for longer headlines in non-Latin scripts
       })
 
       const extractedHeading = response.choices[0]?.message?.content?.trim()
@@ -304,14 +338,17 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
         .replace(/^Headline:\s*/i, '') // Remove "Headline:" prefix
         .trim()
       
-      // Check for invalid patterns
+      // Enhanced invalid pattern checking
       const invalidPatterns = [
-        /NEW DELHI,?\s+[A-Za-z]+\s+\d+\s*\([A-Z]+\)/i, // "NEW DELHI, Sept 5 (PTI)"
+        /NEW DELHI,?\s+[A-Za-z]+\s+\d+\s*\([A-Z]+\)/i,
+        /અમદાવાદ,?\s+[A-Za-z]+\s+\d+/i, // Gujarati city patterns
+        /ગાંધીનગર,?\s+[A-Za-z]+\s+\d+/i,
         /page[-\s]*\d+/i,
         /\d{4}[-\s]*\d+/i, // Issue numbers
         /main paper/i,
         /^[A-Z]+,/i, // City names in all caps followed by comma
-        /\(PTI\)|\(ANI\)/i,
+        /\(PTI\)|\(ANI\)|\(UNI\)/i,
+        /gujarat samachar|sandesh|divya bhaskar/i,
       ]
       
       const isInvalidHeading = invalidPatterns.some(pattern => pattern.test(heading))
@@ -321,22 +358,22 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
         return fallbackHeading()
       }
       
-      // Check if language matches expected language
+      // Enhanced language validation
       const hasDevanagari = /[\u0900-\u097F]/.test(heading)
       const hasGujarati = /[\u0A80-\u0AFF]/.test(heading)
       const hasLatin = /[a-zA-Z]/.test(heading)
       
-      if (detectedLanguage === 'hindi' && !hasDevanagari) {
+      if (detectedLanguage === 'hindi' && !hasDevanagari && hasLatin) {
         console.log('⚠️ Expected Hindi heading but got non-Devanagari script, using fallback')
         return fallbackHeading()
       }
       
-      if (detectedLanguage === 'gujarati' && !hasGujarati) {
+      if (detectedLanguage === 'gujarati' && !hasGujarati && hasLatin) {
         console.log('⚠️ Expected Gujarati heading but got non-Gujarati script, using fallback')
         return fallbackHeading()
       }
       
-      if (detectedLanguage === 'english' && (!hasLatin || hasDevanagari || hasGujarati)) {
+      if (detectedLanguage === 'english' && (!hasLatin || (hasDevanagari || hasGujarati) && !hasLatin)) {
         console.log('⚠️ Expected English heading but got non-Latin script, using fallback')
         return fallbackHeading()
       }
@@ -361,25 +398,32 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     console.log('🔍 Detecting language from text...')
     
     // Use a larger sample for more accurate detection
-    const sample = text.substring(0, 2000).toLowerCase()
+    const sample = text.substring(0, 3000).toLowerCase()
     
-    // Check for Hindi (Devanagari script)
+    // Enhanced language pattern detection
     const hindiPattern = /[\u0900-\u097F]/g
-    // Check for Gujarati script
     const gujaratiPattern = /[\u0A80-\u0AFF]/g
-    // Check for English - only count letters, not numbers or punctuation
     const englishPattern = /[a-z]/g
+    
+    // Additional patterns for better detection
+    const hindiWords = /\b(और|है|में|के|से|को|का|की|पर|एक|यह|वह|भारत|सरकार|मंत्री|प्रधान|राज्य)\b/gi
+    const gujaratiWords = /\b(અને|છે|માં|ના|થી|ને|ની|પર|એક|આ|તે|ભારત|સરકાર|મંત્રી|પ્રધાન|રાજ્ય)\b/gi
+    const englishWords = /\b(and|is|in|of|to|the|a|an|this|that|india|government|minister|prime|state|new|said|will|has|been)\b/gi
     
     const hindiMatches = (sample.match(hindiPattern) || []).length
     const gujaratiMatches = (sample.match(gujaratiPattern) || []).length
     const englishMatches = (sample.match(englishPattern) || []).length
     
+    const hindiWordMatches = (sample.match(hindiWords) || []).length
+    const gujaratiWordMatches = (sample.match(gujaratiWords) || []).length
+    const englishWordMatches = (sample.match(englishWords) || []).length
+    
     const total = hindiMatches + gujaratiMatches + englishMatches
     
     console.log(`📊 Language detection results:`, {
-      hindi: hindiMatches,
-      gujarati: gujaratiMatches,
-      english: englishMatches,
+      hindi: { chars: hindiMatches, words: hindiWordMatches },
+      gujarati: { chars: gujaratiMatches, words: gujaratiWordMatches },
+      english: { chars: englishMatches, words: englishWordMatches },
       total: total
     })
     
@@ -387,21 +431,31 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       return 'unknown'
     }
     
-    // Calculate percentages
-    const hindiPercent = (hindiMatches / total) * 100
-    const gujaratiPercent = (gujaratiMatches / total) * 100
-    const englishPercent = (englishMatches / total) * 100
+    // Calculate weighted scores (characters + word matches * 3)
+    const hindiScore = hindiMatches + (hindiWordMatches * 3)
+    const gujaratiScore = gujaratiMatches + (gujaratiWordMatches * 3)
+    const englishScore = englishMatches + (englishWordMatches * 2) // Less weight for English words
     
-    console.log(`📊 Language percentages:`, {
+    const totalScore = hindiScore + gujaratiScore + englishScore
+    
+    if (totalScore === 0) {
+      return 'unknown'
+    }
+    
+    // Calculate percentages
+    const hindiPercent = (hindiScore / totalScore) * 100
+    const gujaratiPercent = (gujaratiScore / totalScore) * 100
+    const englishPercent = (englishScore / totalScore) * 100
+    
+    console.log(`📊 Language score percentages:`, {
       hindi: `${hindiPercent.toFixed(1)}%`,
       gujarati: `${gujaratiPercent.toFixed(1)}%`,
       english: `${englishPercent.toFixed(1)}%`
     })
     
-    // Determine dominant language with a lower threshold (40% for non-Latin scripts)
-    // This is because Hindi/Gujarati often have fewer characters but more visual weight
-    const nonLatinThreshold = 40
-    const latinThreshold = 60
+    // Determine dominant language with improved thresholds
+    const nonLatinThreshold = 35 // Lowered threshold for better detection
+    const latinThreshold = 50
     
     if (hindiPercent >= nonLatinThreshold && hindiPercent > gujaratiPercent && hindiPercent > englishPercent) {
       console.log(`✅ Detected language: Hindi (${hindiPercent.toFixed(1)}%)`)
@@ -421,11 +475,11 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     // If no clear winner, use the highest percentage
     const maxPercent = Math.max(hindiPercent, gujaratiPercent, englishPercent)
     
-    if (maxPercent === hindiPercent) {
+    if (maxPercent === hindiPercent && hindiPercent > 15) {
       console.log(`✅ Detected primary language: Hindi (${hindiPercent.toFixed(1)}%)`)
       return 'hindi'
     }
-    if (maxPercent === gujaratiPercent) {
+    if (maxPercent === gujaratiPercent && gujaratiPercent > 15) {
       console.log(`✅ Detected primary language: Gujarati (${gujaratiPercent.toFixed(1)}%)`)
       return 'gujarati'
     }
@@ -434,52 +488,232 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       return 'english'
     }
     
-    // Should never reach here, but just in case
-    console.log(`⚠️ Could not determine language, defaulting to English`)
+    // Final fallback
+    console.log(`⚠️ Could not determine language clearly, defaulting to English`)
     return 'english'
   }
 
   async extractTextFromImage(buffer, fileType) {
     try {
-      console.log('🖼️ Starting OCR process...')
+      console.log('🖼️ Starting enhanced OCR process...')
       
-      // Preprocess image for better OCR results
-      let processedBuffer = buffer
+      // Enhanced image preprocessing for newspaper text
+      let processedBuffers = []
       
       try {
-        console.log('🔧 Preprocessing image with Sharp...')
-        processedBuffer = await sharp(buffer)
-          .grayscale() // Convert to grayscale for better OCR
+        console.log('🔧 Advanced preprocessing with Sharp...')
+        
+        // Get image metadata for adaptive processing
+        const metadata = await sharp(buffer).metadata()
+        console.log('📏 Image metadata:', {
+          width: metadata.width,
+          height: metadata.height,
+          density: metadata.density,
+          channels: metadata.channels
+        })
+        
+        // Create multiple processed versions for better OCR results
+        const baseImage = sharp(buffer)
+        
+        // Version 1: High contrast, denoised
+        const version1 = await baseImage
+          .clone()
+          .resize(null, Math.max(2000, metadata.height * 2), { // Upscale for better OCR
+            kernel: sharp.kernel.lanczos3,
+            withoutEnlargement: false
+          })
+          .grayscale()
           .normalize() // Normalize contrast
-          .sharpen() // Sharpen for better text recognition
-          .png() // Convert to PNG for Tesseract
+          .sharpen({ sigma: 1.0, m1: 1.0, m2: 2.0, x1: 2.0, y2: 10.0 })
+          .linear(1.2, -(128 * 0.2)) // Increase contrast
+          .median(2) // Remove noise
+          .png({ quality: 100, compressionLevel: 0 })
           .toBuffer()
-        console.log('✅ Image preprocessing completed')
+        
+        // Version 2: Threshold for high contrast text
+        const version2 = await baseImage
+          .clone()
+          .resize(null, Math.max(2000, metadata.height * 2), {
+            kernel: sharp.kernel.lanczos3,
+            withoutEnlargement: false
+          })
+          .grayscale()
+          .normalize()
+          .linear(2.0, -128) // High contrast
+          .threshold(128) // Binary threshold
+          .png({ quality: 100, compressionLevel: 0 })
+          .toBuffer()
+        
+        // Version 3: Enhanced sharpening for scanned text
+        const version3 = await baseImage
+          .clone()
+          .resize(null, Math.max(1800, metadata.height * 1.5), {
+            kernel: sharp.kernel.lanczos3,
+            withoutEnlargement: false
+          })
+          .grayscale()
+          .normalize() // Normalize histogram
+          .sharpen({ sigma: 1.0, m1: 2.0, m2: 1.0, x1: 2.0, y2: 10.0 })
+          .gamma(0.8) // Adjust gamma for better text visibility
+          .png({ quality: 100, compressionLevel: 0 })
+          .toBuffer()
+        
+        processedBuffers = [
+          { buffer: version1, name: 'enhanced' },
+          { buffer: version2, name: 'threshold' },
+          { buffer: version3, name: 'sharpened' },
+          { buffer: buffer, name: 'original' }
+        ]
+        
+        console.log('✅ Created 4 image processing variants')
       } catch (sharpError) {
-        console.log('⚠️ Sharp preprocessing failed, using original image:', sharpError.message)
-        processedBuffer = buffer
+        console.log('⚠️ Sharp preprocessing failed, using simpler approach:', sharpError.message)
+        
+        // Fallback: simpler preprocessing
+        try {
+          const simpleProcessed = await sharp(buffer)
+            .grayscale()
+            .normalize()
+            .png()
+            .toBuffer()
+          
+          processedBuffers = [
+            { buffer: simpleProcessed, name: 'simple' },
+            { buffer: buffer, name: 'original' }
+          ]
+          console.log('✅ Created 2 simple processing variants')
+        } catch (fallbackError) {
+          console.log('⚠️ All preprocessing failed, using original only:', fallbackError.message)
+          processedBuffers = [{ buffer: buffer, name: 'original' }]
+        }
       }
 
-      // Perform OCR using Tesseract
-      console.log('👁️ Running Tesseract OCR...')
-      const { data: { text } } = await Tesseract.recognize(
-        processedBuffer,
-        'eng+hin', // English and Hindi languages
-        {
-          logger: (m) => {
-            if (m.status === 'recognizing text') {
-              console.log(`📊 OCR Progress: ${Math.round(m.progress * 100)}%`)
-            }
-          }
-        }
-      )
+      // Detect primary language from filename or use all languages
+      let languages = 'eng+hin+guj' // All three languages
+      console.log(`🌐 Using OCR languages: ${languages}`)
 
-      console.log('✅ OCR completed successfully')
-      return text.trim()
+      let bestResult = { text: '', confidence: 0 }
+      
+      // Try OCR on each processed version
+      for (const { buffer: procBuffer, name } of processedBuffers) {
+        try {
+          console.log(`👁️ Running Tesseract OCR on ${name} version...`)
+          
+          // Get or create worker for this language set
+          const worker = await this.getOrCreateWorker(languages)
+          
+          // Set only parameters that can be changed after initialization
+          await worker.setParameters({
+            tessedit_char_whitelist: '', // Allow all characters
+            tessedit_write_images: '0', // Don't save debug images
+            // OCR accuracy improvements that can be set after init
+            classify_enable_learning: '1',
+            classify_enable_adaptive_matcher: '1',
+            textord_really_old_xheight: '1',
+            segment_penalty_dict_frequent_word: '1',
+            allow_blob_division: '1',
+            classify_enable_adaptive_debugger: '0',
+          })
+          
+          const { data: { text, confidence } } = await worker.recognize(procBuffer)
+
+          console.log(`📊 OCR Results for ${name}: confidence=${confidence?.toFixed(1)}%, length=${text.trim().length}`)
+          
+          // Keep the result with highest confidence or longest meaningful text
+          if (confidence > bestResult.confidence || 
+              (text.trim().length > bestResult.text.trim().length * 1.5 && confidence > 50)) {
+            bestResult = { text: text.trim(), confidence }
+            console.log(`🏆 New best result from ${name} version`)
+          }
+          
+          // If we got very high confidence, no need to try other versions
+          if (confidence > 90 && text.trim().length > 100) {
+            console.log(`✨ Excellent OCR result achieved, stopping early`)
+            break
+          }
+          
+        } catch (ocrError) {
+          console.log(`⚠️ OCR failed on ${name} version:`, ocrError.message)
+          continue
+        }
+      }
+
+      if (!bestResult.text || bestResult.text.length === 0) {
+        throw new Error('No text could be extracted from any image processing version')
+      }
+
+      console.log(`✅ Best OCR result: confidence=${bestResult.confidence?.toFixed(1)}%, length=${bestResult.text.length}`)
+      
+      // Post-process the OCR result
+      let finalText = this.postProcessOCRText(bestResult.text)
+      
+      return finalText
+      
     } catch (error) {
-      console.error('❌ OCR Error:', error)
+      console.error('❌ Enhanced OCR Error:', error)
       throw new Error(`Failed to extract text from image: ${error.message}`)
     }
+  }
+
+  postProcessOCRText(text) {
+    console.log('🔧 Post-processing OCR text...')
+    
+    // Common OCR error corrections
+    let processed = text
+      // Fix common character substitutions
+      .replace(/[|]/g, 'I') // Pipe to I
+      .replace(/[০]/g, '0') // Bengali zero to English zero
+      .replace(/[১]/g, '1') // Bengali one to English one
+      .replace(/[২]/g, '2') // Bengali two to English two
+      .replace(/[৩]/g, '3') // Bengali three to English three
+      .replace(/[৪]/g, '4') // Bengali four to English four
+      .replace(/[৫]/g, '5') // Bengali five to English five
+      .replace(/[৬]/g, '6') // Bengali six to English six
+      .replace(/[৭]/g, '7') // Bengali seven to English seven
+      .replace(/[৮]/g, '8') // Bengali eight to English eight
+      .replace(/[৯]/g, '9') // Bengali nine to English nine
+      // Fix spacing issues
+      .replace(/([a-zA-Z])([०-९])/g, '$1 $2') // Space between English letters and Devanagari numbers
+      .replace(/([०-९])([a-zA-Z])/g, '$1 $2') // Space between Devanagari numbers and English letters
+      .replace(/([અ-હ])([0-9])/g, '$1 $2') // Space between Gujarati and English numbers
+      .replace(/([0-9])([અ-હ])/g, '$1 $2') // Space between English numbers and Gujarati
+      .replace(/([क-ह])([0-9])/g, '$1 $2') // Space between Hindi and English numbers
+      .replace(/([0-9])([क-ह])/g, '$1 $2') // Space between English numbers and Hindi
+      // Fix line breaks and spacing
+      .replace(/\n{3,}/g, '\n\n') // Remove excessive line breaks
+      .replace(/[ \t]{2,}/g, ' ') // Remove excessive spaces
+      .replace(/([.!?])\s*\n\s*([A-Z\u0900-\u097F\u0A80-\u0AFF])/g, '$1\n\n$2') // Proper paragraph breaks
+      // Fix punctuation spacing
+      .replace(/([a-zA-Z\u0900-\u097F\u0A80-\u0AFF])([.!?,:;])/g, '$1$2') // Remove space before punctuation
+      .replace(/([.!?,:;])([a-zA-Z\u0900-\u097F\u0A80-\u0AFF])/g, '$1 $2') // Add space after punctuation
+      
+    // Remove very short lines that are likely OCR artifacts
+    const lines = processed.split('\n')
+    const filteredLines = lines.filter(line => {
+      const trimmed = line.trim()
+      // Keep lines that are longer than 3 characters or contain meaningful characters
+      return trimmed.length > 3 || /[a-zA-Z\u0900-\u097F\u0A80-\u0AFF]{2,}/.test(trimmed)
+    })
+    
+    processed = filteredLines.join('\n').trim()
+    
+    console.log(`🔧 Post-processing completed: ${text.length} -> ${processed.length} characters`)
+    
+    return processed
+  }
+
+  // Cleanup method to terminate workers
+  async cleanup() {
+    console.log('🧹 Cleaning up Tesseract workers...')
+    for (const [workerId, worker] of this.workerPool.entries()) {
+      try {
+        await worker.terminate()
+        console.log(`✅ Terminated worker: ${workerId}`)
+      } catch (error) {
+        console.log(`⚠️ Error terminating worker ${workerId}:`, error.message)
+      }
+    }
+    this.workerPool.clear()
   }
 
   // Static method for external use
@@ -489,4 +723,20 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
   }
 }
 
-export default new TextExtractorService()
+// Create singleton instance
+const textExtractorInstance = new TextExtractorService()
+
+// Graceful cleanup on process termination
+process.on('SIGINT', async () => {
+  console.log('🔄 Received SIGINT, cleaning up...')
+  await textExtractorInstance.cleanup()
+  process.exit(0)
+})
+
+process.on('SIGTERM', async () => {
+  console.log('🔄 Received SIGTERM, cleaning up...')
+  await textExtractorInstance.cleanup()
+  process.exit(0)
+})
+
+export default textExtractorInstance
