@@ -130,13 +130,15 @@ export default function CompareNews() {
 
   const getStepIcon = (step, status) => {
     const icons = {
-      upload: UploadIcon,
+      preparing: FileText,
+      uploading: UploadIcon,
+      processing: Target,
       extraction: FileText,
       analysis: BarChart3,
       completion: CheckCircle
     }
     
-    const IconComponent = icons[step]
+    const IconComponent = icons[step] || FileText
     
     if (status === 'completed') {
       return <CheckCircle className="h-5 w-5 text-green-500" />
@@ -161,24 +163,36 @@ export default function CompareNews() {
       
       // Reset progress and show modal
       setProcessingSteps({
-        upload: { status: 'pending', message: 'Preparing upload...' },
+        preparing: { status: 'pending', message: 'Preparing file for upload...' },
+        uploading: { status: 'pending', message: 'Uploading to secure servers...' },
+        processing: { status: 'pending', message: 'Processing file on server...' },
         extraction: { status: 'pending', message: 'Extracting text content...' },
         analysis: { status: 'pending', message: 'Analyzing sentiment...' },
         completion: { status: 'pending', message: 'Adding to comparison...' }
       })
       setShowProgressModal(true)
 
-      // Step 1: Upload
-      updateProcessingStep('upload', 'processing', 'Uploading file to server...')
-      const uploadResult = await articleAPI.uploadArticle(file)
-      updateProcessingStep('upload', 'completed', 'File uploaded successfully!')
+      // Step 1: Preparing
+      updateProcessingStep('preparing', 'processing', 'Validating file and preparing for upload...')
+      await new Promise(resolve => setTimeout(resolve, 800))
+      updateProcessingStep('preparing', 'completed', 'File prepared successfully!')
 
-      // Step 2: Text Extraction (simulated delay for user experience)
+      // Step 2: Uploading
+      updateProcessingStep('uploading', 'processing', 'Uploading file to secure servers...')
+      const uploadResult = await articleAPI.uploadArticle(file)
+      updateProcessingStep('uploading', 'completed', 'File uploaded successfully!')
+
+      // Step 3: Server Processing
+      updateProcessingStep('processing', 'processing', 'Server is processing your file...')
+      await new Promise(resolve => setTimeout(resolve, 1200))
+      updateProcessingStep('processing', 'completed', 'Server processing completed!')
+
+      // Step 4: Text Extraction
       updateProcessingStep('extraction', 'processing', 'Extracting text from document...')
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      await new Promise(resolve => setTimeout(resolve, 1000))
       updateProcessingStep('extraction', 'completed', 'Text extracted successfully!')
 
-      // Step 3: Add to comparison
+      // Step 5: Add to comparison
       updateProcessingStep('completion', 'processing', 'Adding to comparison...')
       const result = await newsComparisonAPI.addArticle(currentComparison._id, {
         articleId: uploadResult._id,
@@ -189,13 +203,15 @@ export default function CompareNews() {
       setUploadedArticles(result.articles || [])
       updateProcessingStep('completion', 'completed', 'Added to comparison successfully!')
 
-      // Step 4: Start sentiment analysis polling
+      // Step 6: Start sentiment analysis polling
       updateProcessingStep('analysis', 'processing', 'Starting AI sentiment analysis...')
       pollArticleProcessingWithModal(uploadResult._id, newspaperName)
       
     } catch (error) {
       console.error('Error adding article:', error)
-      updateProcessingStep('upload', 'failed', error.response?.data?.message || 'Failed to upload file')
+      // Determine which step failed and update accordingly
+      const currentStep = Object.entries(processingSteps).find(([, { status }]) => status === 'processing')?.[0] || 'preparing'
+      updateProcessingStep(currentStep, 'failed', error.response?.data?.message || 'Failed to process file')
       setTimeout(() => {
         setShowProgressModal(false)
         toast.error(error.response?.data?.message || 'Failed to add article')

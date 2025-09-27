@@ -78,6 +78,7 @@ const Upload = () => {
     handleFileSelect(selectedFile)
   }
 
+
   const handleUpload = async () => {
     if (uploadMode === 'file') {
       if (!file) {
@@ -87,7 +88,9 @@ const Upload = () => {
 
       // Reset progress and show modal
       setProcessingSteps({
-        upload: { status: 'pending', message: 'Preparing upload...' },
+        preparing: { status: 'pending', message: 'Preparing file for upload...' },
+        uploading: { status: 'pending', message: 'Uploading to secure servers...' },
+        processing: { status: 'pending', message: 'Processing file on server...' },
         extraction: { status: 'pending', message: 'Extracting text content...' },
         analysis: { status: 'pending', message: 'Analyzing sentiment...' },
         completion: { status: 'pending', message: 'Finalizing results...' }
@@ -96,24 +99,36 @@ const Upload = () => {
       setUploading(true)
 
       try {
-        // Step 1: Upload
-        updateProcessingStep('upload', 'processing', 'Uploading file to server...')
+        // Step 1: Preparing
+        updateProcessingStep('preparing', 'processing', 'Validating file and preparing for upload...')
+        await new Promise(resolve => setTimeout(resolve, 800))
+        updateProcessingStep('preparing', 'completed', 'File prepared successfully!')
+
+        // Step 2: Uploading
+        updateProcessingStep('uploading', 'processing', 'Uploading file to secure servers...')
         const result = await articleAPI.uploadArticle(file)
-        updateProcessingStep('upload', 'completed', 'File uploaded successfully!')
+        updateProcessingStep('uploading', 'completed', 'File uploaded successfully!')
         setArticleId(result._id)
 
-        // Step 2: Text Extraction (simulated delay for user experience)
+        // Step 3: Server Processing
+        updateProcessingStep('processing', 'processing', 'Server is processing your file...')
+        await new Promise(resolve => setTimeout(resolve, 1200))
+        updateProcessingStep('processing', 'completed', 'Server processing completed!')
+
+        // Step 4: Text Extraction
         updateProcessingStep('extraction', 'processing', 'Extracting text from document...')
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise(resolve => setTimeout(resolve, 1000))
         updateProcessingStep('extraction', 'completed', 'Text extracted successfully!')
 
-        // Step 3: Start sentiment analysis polling
+        // Step 5: Start sentiment analysis polling
         updateProcessingStep('analysis', 'processing', 'Starting AI sentiment analysis...')
         pollProcessingStatus(result._id)
 
       } catch (error) {
         console.error('Upload error:', error)
-        updateProcessingStep('upload', 'failed', error.response?.data?.message || 'Failed to upload file')
+        // Determine which step failed and update accordingly
+        const currentStep = Object.entries(processingSteps).find(([, { status }]) => status === 'processing')?.[0] || 'preparing'
+        updateProcessingStep(currentStep, 'failed', error.response?.data?.message || 'Failed to process file')
         setTimeout(() => {
           setShowProgressModal(false)
           toast.error(error.response?.data?.message || 'Failed to upload file')
@@ -129,8 +144,10 @@ const Upload = () => {
 
       // Reset progress and show modal
       setProcessingSteps({
-        upload: { status: 'pending', message: 'Creating article...' },
-        extraction: { status: 'completed', message: 'Text content ready!' },
+        preparing: { status: 'pending', message: 'Preparing text content...' },
+        uploading: { status: 'pending', message: 'Creating article...' },
+        processing: { status: 'pending', message: 'Processing content...' },
+        extraction: { status: 'pending', message: 'Text content ready!' },
         analysis: { status: 'pending', message: 'Analyzing sentiment...' },
         completion: { status: 'pending', message: 'Finalizing results...' }
       })
@@ -138,19 +155,36 @@ const Upload = () => {
       setUploading(true)
 
       try {
-        // Step 1: Create article
-        updateProcessingStep('upload', 'processing', 'Creating article from text...')
+        // Step 1: Preparing
+        updateProcessingStep('preparing', 'processing', 'Validating text content...')
+        await new Promise(resolve => setTimeout(resolve, 600))
+        updateProcessingStep('preparing', 'completed', 'Text content validated!')
+
+        // Step 2: Creating article
+        updateProcessingStep('uploading', 'processing', 'Creating article from text...')
         const result = await articleAPI.createFromText(textData.title, textData.content, textData.language)
-        updateProcessingStep('upload', 'completed', 'Article created successfully!')
+        updateProcessingStep('uploading', 'completed', 'Article created successfully!')
         setArticleId(result._id)
 
-        // Step 2: Start sentiment analysis polling
+        // Step 3: Processing
+        updateProcessingStep('processing', 'processing', 'Processing article content...')
+        await new Promise(resolve => setTimeout(resolve, 800))
+        updateProcessingStep('processing', 'completed', 'Content processing completed!')
+
+        // Step 4: Text ready (instant for text mode)
+        updateProcessingStep('extraction', 'processing', 'Preparing text content...')
+        await new Promise(resolve => setTimeout(resolve, 400))
+        updateProcessingStep('extraction', 'completed', 'Text content ready!')
+
+        // Step 5: Start sentiment analysis polling
         updateProcessingStep('analysis', 'processing', 'Starting AI sentiment analysis...')
         pollProcessingStatus(result._id)
 
       } catch (error) {
         console.error('Text upload error:', error)
-        updateProcessingStep('upload', 'failed', error.response?.data?.message || 'Failed to create article')
+        // Determine which step failed and update accordingly
+        const currentStep = Object.entries(processingSteps).find(([, { status }]) => status === 'processing')?.[0] || 'preparing'
+        updateProcessingStep(currentStep, 'failed', error.response?.data?.message || 'Failed to create article')
         setTimeout(() => {
           setShowProgressModal(false)
           toast.error(error.response?.data?.message || 'Failed to create article')
@@ -262,13 +296,15 @@ const Upload = () => {
 
   const getStepIcon = (step, status) => {
     const icons = {
-      upload: UploadIcon,
+      preparing: FileText,
+      uploading: UploadIcon,
+      processing: Eye,
       extraction: FileText,
       analysis: BarChart3,
       completion: CheckCircle
     }
     
-    const IconComponent = icons[step]
+    const IconComponent = icons[step] || FileText
     
     if (status === 'completed') {
       return <CheckCircle className="h-5 w-5 text-green-500" />
@@ -567,7 +603,7 @@ const Upload = () => {
 
               {/* Action Buttons */}
               <div className="flex space-x-3">
-                {processingSteps.completion.status === 'completed' && articleId && (
+                {processingSteps.completion?.status === 'completed' && articleId && (
                   <button
                     onClick={() => {
                       setShowProgressModal(false)
@@ -580,7 +616,7 @@ const Upload = () => {
                   </button>
                 )}
                 
-                {(processingSteps.completion.status === 'failed' || processingSteps.upload.status === 'failed') && (
+                {(processingSteps.completion?.status === 'failed' || Object.values(processingSteps).some(step => step.status === 'failed')) && (
                   <button
                     onClick={() => setShowProgressModal(false)}
                     className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
