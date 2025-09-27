@@ -15,6 +15,7 @@ import Upload from './pages/Upload'
 import ArticleDetail from './pages/ArticleDetail'
 import About from './pages/About'
 import AdminDashboard from './pages/AdminDashboard'
+import CompareNews from './pages/CompareNews'
 
 export default function App() {
   return (
@@ -40,6 +41,22 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <Upload />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/compare-news" 
+                element={
+                  <ProtectedRoute>
+                    <CompareNews />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/compare-news/:id" 
+                element={
+                  <ProtectedRoute>
+                    <CompareNews />
                   </ProtectedRoute>
                 } 
               />

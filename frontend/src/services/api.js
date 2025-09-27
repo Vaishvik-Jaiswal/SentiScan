@@ -86,6 +86,45 @@ export const articleAPI = {
   },
 }
 
+// News Comparison API functions
+export const newsComparisonAPI = {
+  // Create new comparison
+  createComparison: async (comparisonData) => {
+    const response = await api.post('/api/news-comparison', comparisonData)
+    return response.data
+  },
+
+  // Add article to comparison
+  addArticle: async (comparisonId, articleData) => {
+    const response = await api.post(`/api/news-comparison/${comparisonId}/add-article`, articleData)
+    return response.data
+  },
+
+  // Start analysis
+  startAnalysis: async (comparisonId) => {
+    const response = await api.post(`/api/news-comparison/${comparisonId}/analyze`)
+    return response.data
+  },
+
+  // Get user comparisons
+  getUserComparisons: async (page = 1, limit = 10) => {
+    const response = await api.get(`/api/news-comparison?page=${page}&limit=${limit}`)
+    return response.data
+  },
+
+  // Get comparison by ID
+  getComparison: async (comparisonId) => {
+    const response = await api.get(`/api/news-comparison/${comparisonId}`)
+    return response.data
+  },
+
+  // Delete comparison
+  deleteComparison: async (comparisonId) => {
+    const response = await api.delete(`/api/news-comparison/${comparisonId}`)
+    return response.data
+  },
+}
+
 // User API functions
 export const userAPI = {
   // Login

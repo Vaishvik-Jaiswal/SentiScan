@@ -121,6 +121,17 @@ export default function Navbar() {
               >
                 Upload
               </Link>
+              
+              <Link
+                to="/compare-news"
+                className={`font-medium transition-colors ${
+                  isActivePage('/compare-news') 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+                }`}
+              >
+                Compare News
+              </Link>
 
               {user.role === 'admin' && (
                 <Link
@@ -278,6 +289,18 @@ export default function Navbar() {
                     onClick={() => setIsOpen(false)}
                   >
                     Upload
+                  </Link>
+                  
+                  <Link
+                    to="/compare-news"
+                    className={`block px-3 py-2 rounded-lg font-medium transition-colors ${
+                      isActivePage('/compare-news') 
+                        ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Compare News
                   </Link>
 
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
