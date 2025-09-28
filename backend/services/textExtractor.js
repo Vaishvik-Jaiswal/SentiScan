@@ -2,6 +2,10 @@ import pdfParse from 'pdf-parse'
 import mammoth from 'mammoth'
 import Tesseract from 'tesseract.js'
 import sharp from 'sharp'
+import pdf2pic from 'pdf2pic'
+import pdfPoppler from 'pdf-poppler'
+import fs from 'fs'
+import path from 'path'
 import sentimentAnalysis from './sentimentAnalysis.js'
 
 // Test imports on startup
@@ -10,6 +14,26 @@ console.log('📄 PDF parser available:', typeof pdfParse)
 console.log('📝 Mammoth available:', typeof mammoth)
 console.log('🖼️ Tesseract OCR available:', typeof Tesseract)
 console.log('🖼️ Sharp image processor available:', typeof sharp)
+console.log('🔄 PDF2Pic converter available:', typeof pdf2pic)
+console.log('🔄 PDF-Poppler converter available:', typeof pdfPoppler)
+
+// Test pdf2pic functionality
+try {
+  if (typeof pdf2pic === 'function') {
+    console.log('✅ PDF2Pic constructor is properly accessible')
+  } else {
+    console.error('❌ PDF2Pic constructor is not accessible')
+  }
+} catch (error) {
+  console.error('❌ Error testing PDF2Pic:', error.message)
+}
+
+// Test PDF parser functionality
+if (typeof pdfParse === 'function') {
+  console.log('✅ PDF parser is properly loaded and ready')
+} else {
+  console.error('❌ PDF parser is not properly loaded!')
+}
 
 class TextExtractorService {
   constructor() {
@@ -51,10 +75,11 @@ class TextExtractorService {
 
       switch (fileType.toLowerCase()) {
         case 'pdf':
-          console.log('📄 Processing PDF file...')
-          const pdfData = await pdfParse(buffer)
-          extractedText = pdfData.text
-          console.log(`✅ PDF extracted: ${extractedText.length} characters`)
+          console.log('📄 Processing PDF file with image conversion approach...')
+          console.log(`📊 PDF buffer info: size=${buffer.length} bytes`)
+          
+          extractedText = await this.extractTextFromPDFWithOCR(buffer, originalName)
+          console.log(`✅ PDF OCR processing completed: ${extractedText.length} characters`)
           break
 
         case 'docx':
@@ -87,19 +112,44 @@ class TextExtractorService {
           throw new Error(`Unsupported file type: ${fileType}`)
       }
 
+      // Ensure we always have some meaningful text
       if (!extractedText || extractedText.trim().length === 0) {
         console.log(`⚠️ No text extracted from ${fileType} file, using filename as content`)
-        extractedText = `Content from ${originalName}. This file may be image-based or protected.`
+        extractedText = `This is a ${fileType.toUpperCase()} document named "${originalName}". The file appears to be image-based, protected, or could not be processed for text extraction.`
       }
       
       // Handle very short extractions (likely scanned PDFs)
-      if (extractedText.trim().length < 10) {
-        console.log(`⚠️ Very short text extraction (${extractedText.trim().length} chars), likely scanned PDF`)
-        extractedText = `Content from ${originalName}. This appears to be a scanned document or image-based PDF. Original text: "${extractedText.trim()}"`
+      else if (extractedText.trim().length < 20) {
+        console.log(`⚠️ Very short text extraction (${extractedText.trim().length} chars), enhancing with metadata`)
+        const originalText = extractedText.trim()
+        extractedText = `This is a ${fileType.toUpperCase()} document named "${originalName}". Limited text was extracted: "${originalText}". This suggests the document may be primarily image-based or scanned.`
       }
 
       // Extract heading using OpenAI
-      heading = await this.extractHeadingWithAI(extractedText)
+      try {
+        console.log('🔍 Attempting AI heading extraction...')
+        console.log(`📝 Text preview for heading extraction: "${extractedText.substring(0, 300)}..."`)
+        
+        if (!extractedText || extractedText.trim().length < 10) {
+          console.log('⚠️ Text too short for AI heading extraction, using fallback')
+          heading = this.generateFallbackHeading(originalName, extractedText)
+        } else {
+          heading = await this.extractHeadingWithAI(extractedText)
+          console.log(`✅ AI heading extraction successful: "${heading}"`)
+        }
+      } catch (headingError) {
+        console.error('❌ AI heading extraction failed:', headingError.message)
+        console.log('🔄 Using fallback heading generation...')
+        heading = this.generateFallbackHeading(originalName, extractedText)
+      }
+      
+      // Ensure we always have a heading
+      if (!heading || heading.trim().length === 0) {
+        console.log('⚠️ No heading generated, creating final fallback...')
+        heading = this.generateFallbackHeading(originalName, extractedText)
+      }
+      
+      console.log(`📰 Final heading: "${heading}"`)
 
       // Clean up the text
       extractedText = extractedText.replace(/\s+/g, ' ').trim()
@@ -127,6 +177,12 @@ class TextExtractorService {
   async extractHeadingWithAI(text) {
     console.log('🤖 Extracting heading using Azure OpenAI...')
     
+    // Check if we have meaningful text to work with
+    if (!text || text.trim().length < 10) {
+      console.log('⚠️ No meaningful text available for heading extraction')
+      return 'Document Content'
+    }
+    
     // First, detect the language of the article
     const detectedLanguage = this.detectLanguage(text)
     console.log(`🌐 Detected article language: ${detectedLanguage}`)
@@ -135,7 +191,10 @@ class TextExtractorService {
     const fallbackHeading = () => {
       console.log('⚠️ Using fallback heading extraction...')
       const lines = text.split('\n').filter(line => line.trim().length > 0)
-      if (lines.length === 0) return 'Untitled'
+      if (lines.length === 0) {
+        console.log('⚠️ No lines found in text, using default heading')
+        return 'Document Content'
+      }
       
       // Enhanced OCR-specific patterns to skip
       const skipPatterns = [
@@ -300,7 +359,7 @@ Output: PM launches new welfare scheme for farmers
 Input: "TheHitavada\nNagpur, Monday\nसरकार ने किसानों के लिए नई योजना की घोषणा की\nकृषि मंत्री ने कहा कि..."
 Output: सरकार ने किसानों के लिए नई योजना की घोषणा की
 
-Input: "Gujarat Samachar | અમદાવાد | પેજ-3\nભારત સરકાર દ્વારા નવી શિક્ષણ નીતિ જાહેર\nગુજરાત રાજ્યમાં..."
+Input: "Gujarat Samachar | અમદાવાદ | પેજ-3\nભારત સરકાર દ્વારા નવી શિક્ષણ નીતિ જાહેર\nગુજરાત રાજ્યમાં..."
 Output: ભારત સરકાર દ્વારા નવી શિક્ષણ નીતિ જાહેર
 
 REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article content.`
@@ -491,6 +550,193 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     // Final fallback
     console.log(`⚠️ Could not determine language clearly, defaulting to English`)
     return 'english'
+  }
+
+  generateFallbackHeading(originalName, extractedText) {
+    console.log('🔄 Generating fallback heading...')
+    console.log(`📝 Available text length: ${extractedText?.length || 0} characters`)
+    
+    // If we have some text, try to extract a meaningful heading
+    if (extractedText && extractedText.trim().length > 5) {
+      console.log(`📰 Attempting to extract heading from text: "${extractedText.substring(0, 200)}..."`)
+      
+      const lines = extractedText.split(/[\n\r]/).map(line => line.trim()).filter(line => line.length > 3)
+      console.log(`📄 Found ${lines.length} text lines`)
+      
+      if (lines.length > 0) {
+        // Look for the best line to use as heading
+        for (const line of lines) {
+          // Skip very short lines or lines that look like artifacts
+          if (line.length >= 10 && line.length <= 150) {
+            // Check if it looks like a proper heading (not just random characters)
+            const wordCount = line.split(/\s+/).filter(word => word.length > 1).length
+            if (wordCount >= 2) {
+              let heading = line.trim()
+              if (heading.length > 100) {
+                heading = heading.substring(0, 97) + '...'
+              }
+              console.log(`✅ Generated fallback heading from text: "${heading}"`)
+              return heading
+            }
+          }
+        }
+        
+        // If no good single line, try first few words
+        const allWords = extractedText.trim().split(/\s+/).filter(word => word.length > 1)
+        if (allWords.length >= 3) {
+          const heading = allWords.slice(0, 8).join(' ') + (allWords.length > 8 ? '...' : '')
+          console.log(`✅ Generated fallback heading from first words: "${heading}"`)
+          return heading
+        }
+      }
+    }
+    
+    // If no meaningful text, generate heading from filename
+    const baseName = originalName.replace(/\.[^/.]+$/, "") // Remove extension
+    const heading = `Newspaper Article: ${baseName}`
+    console.log(`✅ Generated fallback heading from filename: "${heading}"`)
+    return heading
+  }
+
+  ensureTempDirectory() {
+    const tempDir = path.join(process.cwd(), 'temp')
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true })
+      console.log(`📁 Created temp directory: ${tempDir}`)
+    }
+    return tempDir
+  }
+
+  cleanupTempFiles() {
+    try {
+      const tempDir = path.join(process.cwd(), 'temp')
+      if (fs.existsSync(tempDir)) {
+        const files = fs.readdirSync(tempDir)
+        files.forEach(file => {
+          if (file.startsWith('page')) {
+            const filePath = path.join(tempDir, file)
+            fs.unlinkSync(filePath)
+          }
+        })
+        console.log(`🧹 Cleaned up ${files.length} temporary files`)
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not clean up temporary files:', error.message)
+    }
+  }
+
+  async extractTextFromPDFWithOCR(buffer, originalName) {
+    console.log('🔄 Converting PDF to images for OCR processing...')
+    console.log(`📊 PDF buffer size: ${buffer.length} bytes`)
+    console.log('🗞️ Optimizing for newspaper article image processing...')
+    
+    let extractedText = ''
+    const tempPath = this.ensureTempDirectory()
+    console.log(`📁 Using temp directory: ${tempPath}`)
+    
+    // Try multiple PDF to image conversion approaches
+    const approaches = [
+      { name: 'PDF-Poppler', method: 'poppler' },
+      { name: 'PDF2Pic', method: 'pdf2pic' },
+    ]
+    
+    for (const approach of approaches) {
+      let imagePaths = []
+      let tempPdfPath = null
+      try {
+        console.log(`🔄 Attempting PDF conversion with ${approach.name}...`)
+        
+        if (approach.method === 'poppler') {
+          // Method 1: Use pdf-poppler (often better for scanned documents)
+          tempPdfPath = path.join(tempPath, `temp_${Date.now()}.pdf`)
+          fs.writeFileSync(tempPdfPath, buffer)
+          
+          const options = {
+            format: 'png',
+            out_dir: tempPath,
+            out_prefix: 'page',
+            page: null, // All pages
+            resolution_x: 300,
+            resolution_y: 300
+          }
+          
+          console.log('📄 Converting with PDF-Poppler...')
+          await pdfPoppler.convert(tempPdfPath, options)
+          
+          // Collect generated image paths
+          imagePaths = fs.readdirSync(tempPath)
+            .filter(file => file.startsWith('page-') && file.endsWith('.png'))
+            .sort((a, b) => {
+              const pageA = parseInt(a.match(/page-(\d+)/)[1])
+              const pageB = parseInt(b.match(/page-(\d+)/)[1])
+              return pageA - pageB
+            })
+            .map(file => path.join(tempPath, file))
+          
+          console.log(`✅ PDF-Poppler conversion successful: ${imagePaths.length} pages`)
+          
+        } else if (approach.method === 'pdf2pic') {
+          // Method 2: Use pdf2pic as fallback
+          const convertOptions = {
+            density: 300,           // Higher DPI for newspaper text
+            format: "png",
+            size: "2480x3508",      // A4 at 300 DPI
+            savedir: tempPath,
+            savename: "page"
+          }
+          
+          console.log('📄 Converting with PDF2Pic...')
+          const convert = pdf2pic.fromBuffer(buffer, convertOptions)
+          const pageOutputs = await convert.bulk(-1)
+          
+          if (pageOutputs && pageOutputs.length > 0) {
+            imagePaths = pageOutputs.map(output => output.path)
+            // Sort by page number if necessary
+            imagePaths.sort((a, b) => {
+              const pageA = parseInt(a.match(/\.(\d+)\./)[1])
+              const pageB = parseInt(b.match(/\.(\d+)\./)[1])
+              return pageA - pageB
+            })
+            console.log(`✅ PDF2Pic conversion successful: ${imagePaths.length} pages`)
+          }
+        }
+        
+        if (imagePaths.length > 0) {
+          const pageTexts = []
+          for (const imagePath of imagePaths) {
+            console.log(`🖼️ Processing page: ${imagePath}`)
+            const imageBuffer = fs.readFileSync(imagePath)
+            const pageText = await this.extractTextFromImage(imageBuffer, 'png')
+            pageTexts.push(pageText)
+            fs.unlinkSync(imagePath) // Clean up immediately
+          }
+          
+          extractedText = pageTexts.join('\n\n')
+          console.log(`✅ Combined text from ${pageTexts.length} pages: ${extractedText.length} characters`)
+          
+          break // Success, exit the loop
+        } else {
+          console.log(`❌ ${approach.name} conversion failed - no images produced`)
+        }
+        
+      } catch (error) {
+        console.error(`❌ ${approach.name} conversion failed:`, error.message)
+      } finally {
+        // Clean up temp PDF if created
+        if (tempPdfPath && fs.existsSync(tempPdfPath)) {
+          fs.unlinkSync(tempPdfPath)
+        }
+      }
+    }
+    
+    // Clean up any remaining temporary files
+    this.cleanupTempFiles()
+    
+    if (extractedText.trim().length > 10) {
+      return extractedText.trim()
+    } else {
+      return `PDF document "${originalName}" was processed with multiple conversion methods but minimal readable text could be extracted. This may be due to poor image quality, complex layouts, or unsupported languages. Extracted: "${extractedText.substring(0, 100)}"`
+    }
   }
 
   async extractTextFromImage(buffer, fileType) {
