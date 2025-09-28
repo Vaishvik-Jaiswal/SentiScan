@@ -8,6 +8,7 @@ import {
   createFromText,
   serveArticleFile,
   getDownloadUrl,
+  downloadArticle,
   upload 
 } from '../controllers/articleController.js'
 import { protect } from '../middleware/authMiddleware.js'
@@ -65,6 +66,9 @@ router.get('/test', async (req, res) => {
 router.route('/:id')
   .get(getArticleById)
   .delete(deleteArticle)
+
+router.route('/:id/download')
+  .get(downloadArticle)
 
 router.route('/:id/file')
   .get(serveArticleFile)

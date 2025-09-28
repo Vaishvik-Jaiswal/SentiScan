@@ -123,6 +123,22 @@ export const newsComparisonAPI = {
     const response = await api.delete(`/api/news-comparison/${comparisonId}`)
     return response.data
   },
+
+  // Download PDF report
+  downloadPDFReport: async (comparisonId) => {
+    const response = await api.get(`/api/news-comparison/${comparisonId}/pdf-report`, {
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
+  // Download article as text file
+  downloadArticle: async (articleId) => {
+    const response = await api.get(`/api/articles/${articleId}/download`, {
+      responseType: 'blob'
+    })
+    return response.data
+  },
 }
 
 // User API functions

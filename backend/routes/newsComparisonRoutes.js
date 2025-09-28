@@ -5,7 +5,8 @@ import {
   startComparisonAnalysis,
   getUserComparisons,
   getComparisonById,
-  deleteComparison
+  deleteComparison,
+  generatePDFReport
 } from '../controllers/newsComparisonController.js'
 import { protect } from '../middleware/authMiddleware.js'
 
@@ -27,5 +28,8 @@ router.route('/:id/add-article')
 
 router.route('/:id/analyze')
   .post(startComparisonAnalysis)
+
+router.route('/:id/pdf-report')
+  .get(generatePDFReport)
 
 export default router

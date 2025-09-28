@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Type, File, X, Loader, Eye, BarChart3 } from 'lucide-react'
+import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Type, File, X, Loader, Eye, BarChart3, FileBarChart, Layers, Sparkles, Brain, Zap } from 'lucide-react'
 import { articleAPI } from '../services/api'
 import { toast } from 'react-toastify'
 
@@ -541,8 +541,14 @@ const Upload = () => {
             <div className="p-8">
               {/* Header */}
               <div className="text-center mb-8">
-                <div className="bg-blue-100 dark:bg-blue-900/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BarChart3 className="h-8 w-8 text-blue-600" />
+                <div className="bg-gradient-to-br from-blue-500 to-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  {processingSteps.preparing?.status === 'active' && <FileBarChart className="h-8 w-8 text-white animate-pulse" />}
+                  {processingSteps.uploading?.status === 'active' && <UploadIcon className="h-8 w-8 text-white animate-bounce" />}
+                  {processingSteps.processing?.status === 'active' && <Layers className="h-8 w-8 text-white animate-spin" />}
+                  {processingSteps.extraction?.status === 'active' && <FileText className="h-8 w-8 text-white animate-pulse" />}
+                  {processingSteps.analysis?.status === 'active' && <Brain className="h-8 w-8 text-white animate-bounce" />}
+                  {processingSteps.completion?.status === 'active' && <Sparkles className="h-8 w-8 text-white" />}
+                  {!Object.values(processingSteps).some(step => step.status === 'active') && <BarChart3 className="h-8 w-8 text-white" />}
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                   Processing Your Article

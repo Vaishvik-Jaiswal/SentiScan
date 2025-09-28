@@ -16,8 +16,44 @@ import {
   TrendingUp,
   Users,
   Target,
-  Upload
+  Upload,
+  PieChart,
+  Activity,
+  Zap,
+  Download,
+  FileBarChart,
+  Brain,
+  Layers,
+  Sparkles
 } from 'lucide-react'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  RadialLinearScale
+} from 'chart.js'
+import { Bar, Pie, Line, Radar } from 'react-chartjs-2'
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  RadialLinearScale
+)
 import { toast } from 'react-toastify'
 import { newsComparisonAPI, articleAPI } from '../services/api'
 
@@ -1179,6 +1215,61 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
     }
   }
 
+  const [pdfGenerating, setPdfGenerating] = useState(false)
+  const [pdfProgress, setPdfProgress] = useState({ step: '', message: '', progress: 0 })
+
+  const handleDownloadPDFReport = async () => {
+    try {
+      setPdfGenerating(true)
+      setPdfProgress({ step: 'analyzing', message: 'Analyzing comparison data...', progress: 10 })
+      
+      // Simulate progress steps with realistic timing
+      setTimeout(() => {
+        setPdfProgress({ step: 'generating-charts', message: 'Generating visual charts and analytics...', progress: 30 })
+      }, 800)
+      
+      setTimeout(() => {
+        setPdfProgress({ step: 'ai-insights', message: 'Processing AI insights and analysis...', progress: 50 })
+      }, 1600)
+      
+      setTimeout(() => {
+        setPdfProgress({ step: 'compiling', message: 'Compiling comprehensive PDF report...', progress: 70 })
+      }, 2400)
+      
+      const pdfBlob = await newsComparisonAPI.downloadPDFReport(comparison._id)
+      
+      setPdfProgress({ step: 'finalizing', message: 'Finalizing download...', progress: 90 })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `news-comparison-report-${comparison._id}-${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      setPdfProgress({ step: 'complete', message: 'Report downloaded successfully!', progress: 100 })
+      toast.success('PDF report downloaded successfully')
+      
+      setTimeout(() => {
+        setPdfGenerating(false)
+        setPdfProgress({ step: '', message: '', progress: 0 })
+      }, 2000)
+      
+    } catch (error) {
+      console.error('Error downloading PDF report:', error)
+      setPdfProgress({ step: 'error', message: 'Failed to generate PDF report. Please try again.', progress: 0 })
+      toast.error('Failed to download PDF report')
+      
+      setTimeout(() => {
+        setPdfGenerating(false)
+        setPdfProgress({ step: '', message: '', progress: 0 })
+      }, 3000)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1195,6 +1286,13 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                 </p>
               </div>
               <div className="flex space-x-3">
+                <button
+                  onClick={handleDownloadPDFReport}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download PDF Report</span>
+                </button>
                 <button
                   onClick={() => {
                     if (window.confirm('Are you sure you want to delete this comparison?')) {
@@ -1407,13 +1505,219 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
           </div>
         )}
 
-        {/* AI Remarks */}
+        {/* Enhanced AI Analysis with Charts */}
         {report?.aiRemarks && (
-          <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 rounded-2xl shadow-xl border border-purple-200/50 dark:border-purple-700/50 p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-              <BarChart3 className="h-6 w-6 mr-2 text-purple-600" />
-              AI Analysis & Insights
-            </h2>
+          <div className="space-y-8">
+            {/* Analysis Metrics Overview */}
+            {report.aiRemarks.analysisMetrics && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-2xl shadow-xl border border-blue-200/50 dark:border-blue-700/50 p-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                  <Activity className="h-6 w-6 mr-2 text-blue-600" />
+                  Analysis Metrics
+                </h2>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-blue-200/30 dark:border-blue-700/30">
+                    <div className="text-3xl font-bold text-blue-600 mb-2">
+                      {report.aiRemarks.analysisMetrics.qualityScore}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Quality Score</div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-green-200/30 dark:border-green-700/30">
+                    <div className="text-3xl font-bold text-green-600 mb-2">
+                      {report.aiRemarks.analysisMetrics.sentimentConsistency}%
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Sentiment Consistency</div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-purple-200/30 dark:border-purple-700/30">
+                    <div className="text-3xl font-bold text-purple-600 mb-2">
+                      {report.aiRemarks.analysisMetrics.similarityScore}%
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Similarity Score</div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-orange-200/30 dark:border-orange-700/30">
+                    <div className="text-3xl font-bold text-orange-600 mb-2">
+                      {report.aiRemarks.analysisMetrics.commonKeywordsCount}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Common Keywords</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Interactive Charts */}
+            {report.aiRemarks.visualizationData && (
+              <div className="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/50 dark:to-slate-900/50 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                  <PieChart className="h-6 w-6 mr-2 text-indigo-600" />
+                  Visual Analysis
+                </h2>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Sentiment Distribution Chart */}
+                  {report.aiRemarks.visualizationData.sentimentDistribution && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Sentiment Distribution
+                      </h3>
+                      <div className="h-64">
+                        <Bar
+                          data={report.aiRemarks.visualizationData.sentimentDistribution}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: 'top',
+                              },
+                              title: {
+                                display: false,
+                              },
+                            },
+                            scales: {
+                              y: {
+                                beginAtZero: true,
+                                min: -1,
+                                max: 1,
+                                ticks: {
+                                  callback: function(value) {
+                                    return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value === 0.5 ? 'Mixed' : value;
+                                  }
+                                }
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Similarity Metrics Radar Chart */}
+                  {report.aiRemarks.visualizationData.similarityMetrics && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Similarity Metrics
+                      </h3>
+                      <div className="h-64">
+                        <Radar
+                          data={{
+                            labels: report.aiRemarks.visualizationData.similarityMetrics.labels,
+                            datasets: [{
+                              label: 'Similarity Score',
+                              data: report.aiRemarks.visualizationData.similarityMetrics.data,
+                              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                              borderColor: 'rgba(59, 130, 246, 1)',
+                              borderWidth: 2,
+                              pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                              pointBorderColor: '#fff',
+                              pointHoverBackgroundColor: '#fff',
+                              pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
+                            }]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: false,
+                              },
+                            },
+                            scales: {
+                              r: {
+                                beginAtZero: true,
+                                max: 100,
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Word Frequency Chart */}
+                  {report.aiRemarks.visualizationData.wordFrequency && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Most Common Words
+                      </h3>
+                      <div className="h-64">
+                        <Bar
+                          data={{
+                            labels: report.aiRemarks.visualizationData.wordFrequency.labels,
+                            datasets: [{
+                              label: 'Frequency',
+                              data: report.aiRemarks.visualizationData.wordFrequency.data,
+                              backgroundColor: report.aiRemarks.visualizationData.wordFrequency.backgroundColor,
+                              borderColor: report.aiRemarks.visualizationData.wordFrequency.backgroundColor,
+                              borderWidth: 1
+                            }]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: false,
+                              },
+                            },
+                            scales: {
+                              y: {
+                                beginAtZero: true,
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bias Analysis Chart */}
+                  {report.aiRemarks.visualizationData.biasAnalysis && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Bias Indicators
+                      </h3>
+                      <div className="h-64">
+                        <Bar
+                          data={{
+                            labels: report.aiRemarks.visualizationData.biasAnalysis.labels,
+                            datasets: [{
+                              label: 'Bias Score',
+                              data: report.aiRemarks.visualizationData.biasAnalysis.data,
+                              backgroundColor: report.aiRemarks.visualizationData.biasAnalysis.backgroundColor,
+                              borderColor: report.aiRemarks.visualizationData.biasAnalysis.borderColor,
+                              borderWidth: 1
+                            }]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: false,
+                              },
+                            },
+                            scales: {
+                              y: {
+                                beginAtZero: true,
+                                max: 100,
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* AI Insights */}
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 rounded-2xl shadow-xl border border-purple-200/50 dark:border-purple-700/50 p-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                <Zap className="h-6 w-6 mr-2 text-purple-600" />
+                AI Analysis & Insights
+              </h2>
             
             <div className="space-y-6">
               {/* Overall Assessment */}
@@ -1498,6 +1802,7 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
               </div>
             </div>
           </div>
+          </div>
         )}
 
         {/* Conclusions */}
@@ -1521,6 +1826,151 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
           </div>
         )}
       </div>
+
+      {/* PDF Generation Modal */}
+      {pdfGenerating && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              {/* Header */}
+              <div className="mb-6">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
+                  {pdfProgress.step === 'analyzing' && <FileBarChart className="h-8 w-8 text-white animate-pulse" />}
+                  {pdfProgress.step === 'generating-charts' && <PieChart className="h-8 w-8 text-white animate-spin" />}
+                  {pdfProgress.step === 'ai-insights' && <Brain className="h-8 w-8 text-white animate-bounce" />}
+                  {pdfProgress.step === 'compiling' && <Layers className="h-8 w-8 text-white animate-pulse" />}
+                  {pdfProgress.step === 'finalizing' && <Download className="h-8 w-8 text-white animate-bounce" />}
+                  {pdfProgress.step === 'complete' && <CheckCircle className="h-8 w-8 text-white" />}
+                  {pdfProgress.step === 'error' && <AlertCircle className="h-8 w-8 text-white" />}
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  {pdfProgress.step === 'complete' ? 'Report Ready!' : 
+                   pdfProgress.step === 'error' ? 'Generation Failed' : 'Generating PDF Report'}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  {pdfProgress.message}
+                </p>
+              </div>
+
+              {/* Progress Bar */}
+              {pdfProgress.step !== 'complete' && pdfProgress.step !== 'error' && (
+                <div className="mb-6">
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${pdfProgress.progress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{pdfProgress.progress}% Complete</p>
+                </div>
+              )}
+
+              {/* Progress Steps */}
+              <div className="space-y-3 mb-6">
+                <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+                  pdfProgress.step === 'analyzing' ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : 
+                  ['generating-charts', 'ai-insights', 'compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    pdfProgress.step === 'analyzing' ? 'bg-blue-500 animate-pulse' :
+                    ['generating-charts', 'ai-insights', 'compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <span className={`text-sm ${
+                    pdfProgress.step === 'analyzing' ? 'text-blue-700 dark:text-blue-300 font-medium' :
+                    ['generating-charts', 'ai-insights', 'compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Data Analysis
+                  </span>
+                </div>
+
+                <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+                  pdfProgress.step === 'generating-charts' ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : 
+                  ['ai-insights', 'compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    pdfProgress.step === 'generating-charts' ? 'bg-blue-500 animate-pulse' :
+                    ['ai-insights', 'compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <span className={`text-sm ${
+                    pdfProgress.step === 'generating-charts' ? 'text-blue-700 dark:text-blue-300 font-medium' :
+                    ['ai-insights', 'compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Chart Generation
+                  </span>
+                </div>
+
+                <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+                  pdfProgress.step === 'ai-insights' ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : 
+                  ['compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    pdfProgress.step === 'ai-insights' ? 'bg-blue-500 animate-pulse' :
+                    ['compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <span className={`text-sm ${
+                    pdfProgress.step === 'ai-insights' ? 'text-blue-700 dark:text-blue-300 font-medium' :
+                    ['compiling', 'finalizing', 'complete'].includes(pdfProgress.step) ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    AI Analysis
+                  </span>
+                </div>
+
+                <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+                  pdfProgress.step === 'compiling' ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : 
+                  ['finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    pdfProgress.step === 'compiling' ? 'bg-blue-500 animate-pulse' :
+                    ['finalizing', 'complete'].includes(pdfProgress.step) ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <span className={`text-sm ${
+                    pdfProgress.step === 'compiling' ? 'text-blue-700 dark:text-blue-300 font-medium' :
+                    ['finalizing', 'complete'].includes(pdfProgress.step) ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    PDF Compilation
+                  </span>
+                </div>
+
+                <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+                  pdfProgress.step === 'finalizing' ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : 
+                  pdfProgress.step === 'complete' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    pdfProgress.step === 'finalizing' ? 'bg-blue-500 animate-pulse' :
+                    pdfProgress.step === 'complete' ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <span className={`text-sm ${
+                    pdfProgress.step === 'finalizing' ? 'text-blue-700 dark:text-blue-300 font-medium' :
+                    pdfProgress.step === 'complete' ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Download Ready
+                  </span>
+                </div>
+              </div>
+
+              {/* Success/Error Actions */}
+              {pdfProgress.step === 'complete' && (
+                <div className="flex items-center justify-center space-x-2 text-green-600 dark:text-green-400">
+                  <Sparkles className="h-5 w-5" />
+                  <span className="font-medium">Your report is ready!</span>
+                </div>
+              )}
+
+              {pdfProgress.step === 'error' && (
+                <button
+                  onClick={() => {
+                    setPdfGenerating(false)
+                    setPdfProgress({ step: '', message: '', progress: 0 })
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
