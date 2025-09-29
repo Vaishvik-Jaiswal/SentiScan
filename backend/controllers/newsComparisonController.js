@@ -481,7 +481,9 @@ const generateAIRemarks = async (comparison, articles, similarityAnalysis, senti
     const detailedAnalysis = await generateDetailedAIAnalysis(comparison, articles, similarityAnalysis, sentimentComparison)
     
     // Generate visualization data for charts
+    console.log('📊 Generating visualization data for charts...')
     const visualizationData = generateVisualizationData(comparison, articles, similarityAnalysis, sentimentComparison)
+    console.log('✅ Visualization data generated:', Object.keys(visualizationData))
     
     // Generate basic analysis as fallback
     const basicAnalysis = {
