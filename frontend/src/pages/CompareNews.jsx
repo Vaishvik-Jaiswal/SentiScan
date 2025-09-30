@@ -1432,233 +1432,6 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 📊 REAL COMPARISON CHARTS */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-xl border border-blue-200/50 dark:border-gray-700/50 p-8 mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <PieChart className="h-8 w-8 mr-3 text-blue-600" />
-            Visual Analysis & Insights
-          </h2>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Sentiment Distribution Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30 shadow-lg">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <Activity className="h-5 w-5 mr-2 text-green-600" />
-                Sentiment Distribution
-              </h3>
-              <div className="h-64">
-                <Bar
-                  data={{
-                    labels: comparison.articles.map(a => a.newspaperName || 'Unknown'),
-                    datasets: [
-                      {
-                        label: 'Headline Sentiment',
-                        data: comparison.articles.map(a => {
-                          const sentiment = a.headingSentiment
-                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
-                        }),
-                        backgroundColor: comparison.articles.map(a => {
-                          const sentiment = a.headingSentiment
-                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.8)' : 
-                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.8)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.8)' : 'rgba(156, 163, 175, 0.8)'
-                        }),
-                        borderColor: comparison.articles.map(a => {
-                          const sentiment = a.headingSentiment
-                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
-                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
-                        }),
-                        borderWidth: 2
-                      },
-                      {
-                        label: 'Content Sentiment',
-                        data: comparison.articles.map(a => {
-                          const sentiment = a.contentSentiment
-                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
-                        }),
-                        backgroundColor: comparison.articles.map(a => {
-                          const sentiment = a.contentSentiment
-                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.4)' : 
-                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.4)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(156, 163, 175, 0.4)'
-                        }),
-                        borderColor: comparison.articles.map(a => {
-                          const sentiment = a.contentSentiment
-                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
-                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
-                        }),
-                        borderWidth: 2
-                      }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'top',
-                      },
-                      title: {
-                        display: false,
-                      },
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        min: -1,
-                        max: 1,
-                        ticks: {
-                          callback: function(value) {
-                            return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value === 0.5 ? 'Mixed' : value;
-                          }
-                        }
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Similarity Metrics Radar Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30 shadow-lg">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <Zap className="h-5 w-5 mr-2 text-purple-600" />
-                Similarity Analysis
-              </h3>
-              <div className="h-64">
-                <Radar
-                  data={{
-                    labels: ['Overall Similarity', 'Keyword Overlap', 'Headline Similarity', 'Content Structure', 'Sentiment Alignment'],
-                    datasets: [{
-                      label: 'Similarity Metrics',
-                      data: [
-                        comparison.overallAnalysis?.similarityScore || 75,
-                        Math.min(100, (comparison.overallAnalysis?.commonKeywords?.length || 5) * 10),
-                        comparison.overallAnalysis?.qualityMetrics?.headlineSimilarity || 80,
-                        comparison.overallAnalysis?.qualityMetrics?.contentStructure || 70,
-                        comparison.overallAnalysis?.qualityMetrics?.sentimentAlignment || 65
-                      ],
-                      backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                      borderColor: 'rgba(99, 102, 241, 1)',
-                      borderWidth: 2,
-                      pointBackgroundColor: 'rgba(99, 102, 241, 1)',
-                      pointBorderColor: '#fff',
-                      pointHoverBackgroundColor: '#fff',
-                      pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        display: false
-                      }
-                    },
-                    scales: {
-                      r: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                          stepSize: 20
-                        }
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Bias Analysis Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30 shadow-lg">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <Brain className="h-5 w-5 mr-2 text-red-600" />
-                Bias Indicators
-              </h3>
-              <div className="h-64">
-                <Bar
-                  data={{
-                    labels: comparison.articles.map(a => a.newspaperName || 'Unknown'),
-                    datasets: [{
-                      label: 'Headline vs Content Sentiment Gap',
-                      data: comparison.articles.map(article => {
-                        const headingSentiment = article.headingSentiment
-                        const contentSentiment = article.contentSentiment
-                        const headingScore = headingSentiment === 'Positive' ? 1 : headingSentiment === 'Negative' ? -1 : headingSentiment === 'Mixed' ? 0.5 : 0
-                        const contentScore = contentSentiment === 'Positive' ? 1 : contentSentiment === 'Negative' ? -1 : contentSentiment === 'Mixed' ? 0.5 : 0
-                        return Math.abs(headingScore - contentScore) * 100
-                      }),
-                      backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                      borderColor: 'rgba(239, 68, 68, 1)',
-                      borderWidth: 2
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        display: false
-                      }
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                          callback: function(value) {
-                            return value + '%'
-                          }
-                        }
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Word Frequency Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/30 dark:border-gray-700/30 shadow-lg">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <Layers className="h-5 w-5 mr-2 text-orange-600" />
-                Common Keywords
-              </h3>
-              <div className="h-64">
-                <Bar
-                  data={{
-                    labels: comparison.overallAnalysis?.commonKeywords?.slice(0, 8) || ['news', 'report', 'analysis', 'story', 'information', 'article', 'media', 'coverage'],
-                    datasets: [{
-                      label: 'Frequency',
-                      data: comparison.overallAnalysis?.commonKeywords?.slice(0, 8).map((_, i) => 12 - i) || [12, 10, 8, 7, 6, 5, 4, 3],
-                      backgroundColor: [
-                        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
-                        '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'
-                      ],
-                      borderWidth: 0
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        display: false
-                      }
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Header */}
         <div className="relative mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
@@ -1807,6 +1580,251 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
             )}
           </div>
         )}
+
+         {/* 📊 REAL COMPARISON CHARTS */}
+         <div className="bg-white dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-xl border border-blue-200/50 dark:border-gray-700/50 p-8 mb-8">
+          <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+            <PieChart className="h-8 w-8 mr-3 text-blue-600" />
+            Visual Analysis & Insights
+          </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Sentiment Distribution Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+              <div className="flex items-center mb-4">
+                <div className="bg-green-100 dark:bg-green-900/20 p-2 rounded-lg mr-3">
+                  <Activity className="h-5 w-5 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Sentiment Distribution
+                </h3>
+              </div>
+              <div className="h-64">
+                <Bar
+                  data={{
+                    labels: comparison.articles.map(a => a.newspaperName || 'Unknown'),
+                    datasets: [
+                      {
+                        label: 'Headline Sentiment',
+                        data: comparison.articles.map(a => {
+                          const sentiment = a.headingSentiment
+                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
+                        }),
+                        backgroundColor: comparison.articles.map(a => {
+                          const sentiment = a.headingSentiment
+                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.8)' : 
+                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.8)' : 
+                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.8)' : 'rgba(156, 163, 175, 0.8)'
+                        }),
+                        borderColor: comparison.articles.map(a => {
+                          const sentiment = a.headingSentiment
+                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
+                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
+                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
+                        }),
+                        borderWidth: 2
+                      },
+                      {
+                        label: 'Content Sentiment',
+                        data: comparison.articles.map(a => {
+                          const sentiment = a.contentSentiment
+                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
+                        }),
+                        backgroundColor: comparison.articles.map(a => {
+                          const sentiment = a.contentSentiment
+                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.4)' : 
+                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.4)' : 
+                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(156, 163, 175, 0.4)'
+                        }),
+                        borderColor: comparison.articles.map(a => {
+                          const sentiment = a.contentSentiment
+                          return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
+                                 sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
+                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
+                        }),
+                        borderWidth: 2
+                      }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'top',
+                      },
+                      title: {
+                        display: false,
+                      },
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        min: -1,
+                        max: 1,
+                        ticks: {
+                          callback: function(value) {
+                            return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value === 0.5 ? 'Mixed' : value;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Similarity Metrics Radar Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+              <div className="flex items-center mb-4">
+                <div className="bg-purple-100 dark:bg-purple-900/20 p-2 rounded-lg mr-3">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Similarity Analysis
+                </h3>
+              </div>
+              <div className="h-64">
+                <Radar
+                  data={{
+                    labels: ['Overall Similarity', 'Keyword Overlap', 'Headline Similarity', 'Content Structure', 'Sentiment Alignment'],
+                    datasets: [{
+                      label: 'Similarity Metrics',
+                      data: [
+                        comparison.overallAnalysis?.similarityScore || 75,
+                        Math.min(100, (comparison.overallAnalysis?.commonKeywords?.length || 5) * 10),
+                        comparison.overallAnalysis?.qualityMetrics?.headlineSimilarity || 80,
+                        comparison.overallAnalysis?.qualityMetrics?.contentStructure || 70,
+                        comparison.overallAnalysis?.qualityMetrics?.sentimentAlignment || 65
+                      ],
+                      backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                      borderColor: 'rgba(99, 102, 241, 1)',
+                      borderWidth: 2,
+                      pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                      pointBorderColor: '#fff',
+                      pointHoverBackgroundColor: '#fff',
+                      pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false
+                      }
+                    },
+                    scales: {
+                      r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                          stepSize: 20
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Bias Analysis Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+              <div className="flex items-center mb-4">
+                <div className="bg-red-100 dark:bg-red-900/20 p-2 rounded-lg mr-3">
+                  <Brain className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Bias Indicators
+                </h3>
+              </div>
+              <div className="h-64">
+                <Bar
+                  data={{
+                    labels: comparison.articles.map(a => a.newspaperName || 'Unknown'),
+                    datasets: [{
+                      label: 'Headline vs Content Sentiment Gap',
+                      data: comparison.articles.map(article => {
+                        const headingSentiment = article.headingSentiment
+                        const contentSentiment = article.contentSentiment
+                        const headingScore = headingSentiment === 'Positive' ? 1 : headingSentiment === 'Negative' ? -1 : headingSentiment === 'Mixed' ? 0.5 : 0
+                        const contentScore = contentSentiment === 'Positive' ? 1 : contentSentiment === 'Negative' ? -1 : contentSentiment === 'Mixed' ? 0.5 : 0
+                        return Math.abs(headingScore - contentScore) * 100
+                      }),
+                      backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                      borderColor: 'rgba(239, 68, 68, 1)',
+                      borderWidth: 2
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                          callback: function(value) {
+                            return value + '%'
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Word Frequency Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+              <div className="flex items-center mb-4">
+                <div className="bg-orange-100 dark:bg-orange-900/20 p-2 rounded-lg mr-3">
+                  <Layers className="h-5 w-5 text-orange-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Common Keywords
+                </h3>
+              </div>
+              <div className="h-64">
+                <Bar
+                  data={{
+                    labels: comparison.overallAnalysis?.commonKeywords?.slice(0, 8) || ['news', 'report', 'analysis', 'story', 'information', 'article', 'media', 'coverage'],
+                    datasets: [{
+                      label: 'Frequency',
+                      data: comparison.overallAnalysis?.commonKeywords?.slice(0, 8).map((_, i) => 12 - i) || [12, 10, 8, 7, 6, 5, 4, 3],
+                      backgroundColor: [
+                        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+                        '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'
+                      ],
+                      borderWidth: 0
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Newspaper Analysis */}
         {report?.newspaperAnalysis && report.newspaperAnalysis.length > 0 && (
