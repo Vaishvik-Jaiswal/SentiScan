@@ -478,7 +478,6 @@ export default function CompareNews() {
     switch (sentiment) {
       case 'Positive': return 'text-green-600 bg-green-100 dark:bg-green-900/20'
       case 'Negative': return 'text-red-600 bg-red-100 dark:bg-red-900/20'
-      case 'Mixed': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20'
       default: return 'text-gray-600 bg-gray-100 dark:bg-gray-900/20'
     }
   }
@@ -1219,7 +1218,7 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
     
     // Helper functions
     const getSentimentScore = (sentiment) => {
-      const scores = { 'Positive': 1, 'Neutral': 0, 'Negative': -1, 'Mixed': 0.5 }
+      const scores = { 'Positive': 1, 'Neutral': 0, 'Negative': -1 }
       return scores[sentiment] || 0
     }
     
@@ -1227,8 +1226,7 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
       const colors = {
         'Positive': `rgba(34, 197, 94, ${alpha})`,
         'Negative': `rgba(239, 68, 68, ${alpha})`,
-        'Neutral': `rgba(156, 163, 175, ${alpha})`,
-        'Mixed': `rgba(251, 191, 36, ${alpha})`
+        'Neutral': `rgba(156, 163, 175, ${alpha})`
       }
       return colors[sentiment] || `rgba(156, 163, 175, ${alpha})`
     }
@@ -1289,19 +1287,19 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
           label: 'Headline Sentiment',
           data: comparison.articles.map(a => {
             const sentiment = a.headingSentiment
-            return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
+            return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : 0
           }),
           backgroundColor: comparison.articles.map(a => {
             const sentiment = a.headingSentiment
             return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.6)' : 
                    sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.6)' : 
-                   sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.6)' : 'rgba(156, 163, 175, 0.6)'
+                   'rgba(156, 163, 175, 0.6)'
           }),
           borderColor: comparison.articles.map(a => {
             const sentiment = a.headingSentiment
             return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
                    sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
-                   sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
+                   'rgba(156, 163, 175, 1)'
           }),
           borderWidth: 2
         },
@@ -1309,19 +1307,19 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
           label: 'Content Sentiment',
           data: comparison.articles.map(a => {
             const sentiment = a.contentSentiment
-            return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
+            return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : 0
           }),
           backgroundColor: comparison.articles.map(a => {
             const sentiment = a.contentSentiment
             return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.4)' : 
                    sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.4)' : 
-                   sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(156, 163, 175, 0.4)'
+                   'rgba(156, 163, 175, 0.4)'
           }),
           borderColor: comparison.articles.map(a => {
             const sentiment = a.contentSentiment
             return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
                    sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
-                   sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
+                   'rgba(156, 163, 175, 1)'
           }),
           borderWidth: 2
         }
@@ -1349,8 +1347,8 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
       data: comparison.articles.map(article => {
         const headingSentiment = article.headingSentiment
         const contentSentiment = article.contentSentiment
-        const headingScore = headingSentiment === 'Positive' ? 1 : headingSentiment === 'Negative' ? -1 : headingSentiment === 'Mixed' ? 0.5 : 0
-        const contentScore = contentSentiment === 'Positive' ? 1 : contentSentiment === 'Negative' ? -1 : contentSentiment === 'Mixed' ? 0.5 : 0
+        const headingScore = headingSentiment === 'Positive' ? 1 : headingSentiment === 'Negative' ? -1 : 0
+        const contentScore = contentSentiment === 'Positive' ? 1 : contentSentiment === 'Negative' ? -1 : 0
         return Math.abs(headingScore - contentScore) * 100
       }),
       backgroundColor: 'rgba(239, 68, 68, 0.6)',
@@ -1610,19 +1608,19 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                         label: 'Headline Sentiment',
                         data: comparison.articles.map(a => {
                           const sentiment = a.headingSentiment
-                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
+                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : 0
                         }),
                         backgroundColor: comparison.articles.map(a => {
                           const sentiment = a.headingSentiment
                           return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.8)' : 
                                  sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.8)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.8)' : 'rgba(156, 163, 175, 0.8)'
+                                 'rgba(156, 163, 175, 0.8)'
                         }),
                         borderColor: comparison.articles.map(a => {
                           const sentiment = a.headingSentiment
                           return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
                                  sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
+                                 'rgba(156, 163, 175, 1)'
                         }),
                         borderWidth: 2
                       },
@@ -1630,19 +1628,19 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                         label: 'Content Sentiment',
                         data: comparison.articles.map(a => {
                           const sentiment = a.contentSentiment
-                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : sentiment === 'Mixed' ? 0.5 : 0
+                          return sentiment === 'Positive' ? 1 : sentiment === 'Negative' ? -1 : 0
                         }),
                         backgroundColor: comparison.articles.map(a => {
                           const sentiment = a.contentSentiment
                           return sentiment === 'Positive' ? 'rgba(34, 197, 94, 0.4)' : 
                                  sentiment === 'Negative' ? 'rgba(239, 68, 68, 0.4)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(156, 163, 175, 0.4)'
+                                 'rgba(156, 163, 175, 0.4)'
                         }),
                         borderColor: comparison.articles.map(a => {
                           const sentiment = a.contentSentiment
                           return sentiment === 'Positive' ? 'rgba(34, 197, 94, 1)' : 
                                  sentiment === 'Negative' ? 'rgba(239, 68, 68, 1)' : 
-                                 sentiment === 'Mixed' ? 'rgba(251, 191, 36, 1)' : 'rgba(156, 163, 175, 1)'
+                                 'rgba(156, 163, 175, 1)'
                         }),
                         borderWidth: 2
                       }
@@ -1666,7 +1664,7 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                         max: 1,
                         ticks: {
                           callback: function(value) {
-                            return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value === 0.5 ? 'Mixed' : value;
+                            return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value;
                           }
                         }
                       }
@@ -1749,8 +1747,8 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                       data: comparison.articles.map(article => {
                         const headingSentiment = article.headingSentiment
                         const contentSentiment = article.contentSentiment
-                        const headingScore = headingSentiment === 'Positive' ? 1 : headingSentiment === 'Negative' ? -1 : headingSentiment === 'Mixed' ? 0.5 : 0
-                        const contentScore = contentSentiment === 'Positive' ? 1 : contentSentiment === 'Negative' ? -1 : contentSentiment === 'Mixed' ? 0.5 : 0
+                        const headingScore = headingSentiment === 'Positive' ? 1 : headingSentiment === 'Negative' ? -1 : 0
+                        const contentScore = contentSentiment === 'Positive' ? 1 : contentSentiment === 'Negative' ? -1 : 0
                         return Math.abs(headingScore - contentScore) * 100
                       }),
                       backgroundColor: 'rgba(239, 68, 68, 0.6)',
@@ -1983,7 +1981,7 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                             max: 1,
                             ticks: {
                               callback: function(value) {
-                                return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value === 0.5 ? 'Mixed' : value;
+                                return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value;
                               }
                             }
                           }
@@ -2162,7 +2160,7 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                                 max: 1,
                                 ticks: {
                                   callback: function(value) {
-                                    return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value === 0.5 ? 'Mixed' : value;
+                                    return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value;
                                   }
                                 }
                               }
@@ -2314,7 +2312,6 @@ function ComparisonResults({ comparison, onStartNew, getSentimentColor }) {
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             article.headingSentiment === 'Positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                             article.headingSentiment === 'Negative' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                            article.headingSentiment === 'Mixed' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
                             'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                           }`}>
                             {article.headingSentiment || 'N/A'}

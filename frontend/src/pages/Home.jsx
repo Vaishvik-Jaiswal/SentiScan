@@ -19,7 +19,7 @@ export default function Home() {
     {
       icon: <Brain className="h-8 w-8 text-purple-600" />,
       title: 'AI-Powered Analysis',
-      description: 'Uses AI to classify sentiment as Positive, Negative, Neutral, or Mixed.'
+      description: 'Uses AI to classify sentiment as Positive, Negative, or Neutral.'
     },
     {
       icon: <BarChart3 className="h-8 w-8 text-orange-600" />,

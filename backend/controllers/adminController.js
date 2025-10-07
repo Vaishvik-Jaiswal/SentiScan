@@ -24,11 +24,22 @@ export const getAdminOverview = async (req, res) => {
       createdAt: { $gte: thirtyDaysAgo }
     })
 
-    // Get sentiment distribution across all articles
+    // Get sentiment distribution across all articles (merge Mixed with Neutral)
     const sentimentDistribution = await Article.aggregate([
       {
+        $addFields: {
+          normalizedSentiment: {
+            $cond: {
+              if: { $eq: ['$contentSentiment', 'Mixed'] },
+              then: 'Neutral',
+              else: '$contentSentiment'
+            }
+          }
+        }
+      },
+      {
         $group: {
-          _id: '$contentSentiment',
+          _id: '$normalizedSentiment',
           count: { $sum: 1 }
         }
       }
@@ -411,9 +422,10 @@ export const getUserDetails = async (req, res) => {
       processingStats: []
     }
 
-    // Process distributions
+    // Process distributions (merge Mixed with Neutral)
     const sentimentCounts = stats.sentimentDistribution.reduce((acc, sentiment) => {
-      acc[sentiment] = (acc[sentiment] || 0) + 1
+      const normalizedSentiment = sentiment === 'Mixed' ? 'Neutral' : sentiment
+      acc[normalizedSentiment] = (acc[normalizedSentiment] || 0) + 1
       return acc
     }, {})
 

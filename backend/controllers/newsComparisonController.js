@@ -360,14 +360,13 @@ const analyzeSimilarity = async (articles) => {
 const generateSentimentComparison = (articles) => {
   try {
     const sentimentScores = {
-      'Positive': 3,
-      'Mixed': 2,
+      'Positive': 2,
       'Neutral': 1,
       'Negative': 0,
     }
     
     let mostPositive = { newspaper: '', score: -1 }
-    let mostNegative = { newspaper: '', score: 4 }
+    let mostNegative = { newspaper: '', score: 3 }
     let totalScore = 0
     
     articles.forEach(article => {
@@ -384,8 +383,7 @@ const generateSentimentComparison = (articles) => {
     })
     
     const averageScore = totalScore / articles.length
-    const averageSentiment = averageScore >= 2.5 ? 'Positive' 
-                           : averageScore >= 1.5 ? 'Mixed'
+    const averageSentiment = averageScore >= 1.5 ? 'Positive' 
                            : averageScore >= 0.5 ? 'Neutral' 
                            : 'Negative'
     
@@ -421,7 +419,7 @@ const generateCompiledReport = async (comparison, articles, similarityAnalysis, 
       let bias = 'Neutral'
       if (sentiment === 'Positive') bias = 'Positive bias'
       else if (sentiment === 'Negative') bias = 'Negative bias'
-      else if (sentiment === 'Mixed') bias = 'Balanced perspective'
+      else if (sentiment === 'Neutral') bias = 'Balanced perspective'
       
       // Extract key points (simplified)
       const keyPoints = [
@@ -720,7 +718,7 @@ const generateAnalysisMetrics = (comparison, articles, similarityAnalysis) => {
 
 // Helper functions for visualization
 const getSentimentScore = (sentiment) => {
-  const scores = { 'Positive': 1, 'Neutral': 0, 'Negative': -1, 'Mixed': 0.5 }
+  const scores = { 'Positive': 1, 'Neutral': 0, 'Negative': -1 }
   return scores[sentiment] || 0
 }
 
@@ -729,7 +727,6 @@ const getSentimentColor = (sentiment, alpha = 1) => {
     'Positive': `rgba(34, 197, 94, ${alpha})`,
     'Negative': `rgba(239, 68, 68, ${alpha})`,
     'Neutral': `rgba(156, 163, 175, ${alpha})`,
-    'Mixed': `rgba(251, 191, 36, ${alpha})`
   }
   return colors[sentiment] || `rgba(156, 163, 175, ${alpha})`
 }
@@ -824,7 +821,6 @@ const generateOverallAssessment = (comparison, similarityAnalysis, sentimentComp
     case 'Negative':
       assessment += 'predominantly critical or unfavorable coverage of the topic.'
       break
-    case 'Mixed':
       assessment += 'varied perspectives with both positive and negative elements.'
       break
     default:
@@ -839,7 +835,6 @@ const generateSentimentAnalysisRemarks = (articles, sentimentComparison) => {
     'Positive': 0,
     'Negative': 0,
     'Neutral': 0,
-    'Mixed': 0
   }
   
   articles.forEach(article => {
@@ -1153,7 +1148,7 @@ const generateChartImages = async (report) => {
               max: 1,
               ticks: {
                 callback: function(value) {
-                  return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value === 0.5 ? 'Mixed' : value;
+                  return value === 1 ? 'Positive' : value === 0 ? 'Neutral' : value === -1 ? 'Negative' : value;
                 }
               }
             }
@@ -1553,7 +1548,6 @@ const generateReportHTML = async (comparison, articles, report, similarityAnalys
         .sentiment-positive { background: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4; }
         .sentiment-negative { background: #fed7d7; color: #742a2a; border: 1px solid #feb2b2; }
         .sentiment-neutral { background: #e2e8f0; color: #2d3748; border: 1px solid #cbd5e0; }
-        .sentiment-mixed { background: #feebc8; color: #744210; border: 1px solid #fbd38d; }
         
         .article-headline {
             font-size: 1em;

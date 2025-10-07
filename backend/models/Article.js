@@ -44,7 +44,7 @@ const articleSchema = new mongoose.Schema(
     },
     headingSentiment: {
       type: String,
-      enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
+      enum: ['Positive', 'Negative', 'Neutral'],
       default: 'Neutral',
     },
     headingSentimentReason: {
@@ -53,7 +53,7 @@ const articleSchema = new mongoose.Schema(
     },
     contentSentiment: {
       type: String,
-      enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
+      enum: ['Positive', 'Negative', 'Neutral'],
       default: 'Neutral',
     },
     contentSentimentReason: {

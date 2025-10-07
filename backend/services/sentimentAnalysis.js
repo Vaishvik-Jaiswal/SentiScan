@@ -104,13 +104,13 @@ class SentimentAnalysisService {
     try {
       const systemPrompt = {
         role: 'system',
-        content: `You are a sentiment analysis assistant. Classify the given article heading and body into one of these categories: Positive, Negative, Neutral, or Mixed. 
+        content: `You are a sentiment analysis assistant. Classify the given article heading and body into one of these categories: Positive, Negative, or Neutral. 
 
 The text may be in English, Hindi, or Gujarati. Respond in JSON format with the following structure:
 {
-  "headingSentiment": "Positive|Negative|Neutral|Mixed",
+  "headingSentiment": "Positive|Negative|Neutral",
   "headingSentimentReason": "Brief explanation for heading classification",
-  "contentSentiment": "Positive|Negative|Neutral|Mixed", 
+  "contentSentiment": "Positive|Negative|Neutral", 
   "contentSentimentReason": "Brief explanation for content classification",
   "confidence": "high|medium|low"
 }
@@ -118,22 +118,20 @@ The text may be in English, Hindi, or Gujarati. Respond in JSON format with the 
 Guidelines for Classification:
 - Positive: Expresses joy, satisfaction, hope, success, optimism, achievements, celebrations, good news
 - Negative: Expresses sadness, anger, fear, disappointment, criticism, failures, disasters, bad news
-- Neutral: Factual, informative, or balanced without strong emotion, objective reporting
-- Mixed: Contains both positive and negative sentiments in significant portions
+- Neutral: Factual, informative, or balanced without strong emotion, objective reporting. Use this for content that contains both positive and negative elements or is primarily factual
 
 Guidelines for Reasoning:
 - Keep explanations concise (1-2 sentences maximum)
 - Mention specific words, phrases, or themes that influenced the classification
 - For multilingual text, explain in English regardless of source language
 - Focus on the most impactful emotional indicators
-- For Mixed sentiment, explain what makes it both positive and negative
-- For Neutral, explain why it lacks emotional bias
+- For Neutral, explain why it lacks emotional bias or contains balanced perspectives
 
 Examples of good reasoning:
 - "Contains celebratory language like 'success', 'achievement', and 'breakthrough' indicating positive outcomes"
 - "Uses words like 'crisis', 'failure', and 'devastating' creating a negative emotional tone"
 - "Presents factual information about statistics and data without emotional language or bias"
-- "Combines positive elements about economic growth with negative concerns about environmental impact"`
+- "Contains balanced reporting with both positive and negative elements, maintaining objective tone"`
       }
 
       const userPrompt = {

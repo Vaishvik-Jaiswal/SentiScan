@@ -31,15 +31,15 @@ const newsComparisonSchema = new mongoose.Schema(
       headline: String,
       headingSentiment: {
         type: String,
-        enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
+        enum: ['Positive', 'Negative', 'Neutral'],
       },
       contentSentiment: {
         type: String,
-        enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
+        enum: ['Positive', 'Negative', 'Neutral'],
       },
       sentiment: {
         type: String,
-        enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
+        enum: ['Positive', 'Negative', 'Neutral'],
       },
       headingSentimentReason: String,
       contentSentimentReason: String,
@@ -88,7 +88,7 @@ const newsComparisonSchema = new mongoose.Schema(
       },
       averageSentiment: {
         type: String,
-        enum: ['Positive', 'Negative', 'Neutral', 'Mixed'],
+        enum: ['Positive', 'Negative', 'Neutral'],
       },
     },
     // Processing status

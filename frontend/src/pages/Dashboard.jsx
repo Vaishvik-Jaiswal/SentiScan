@@ -109,7 +109,6 @@ export default function Dashboard() {
     switch (sentiment) {
       case 'Positive': return 'text-green-600 bg-green-100 dark:bg-green-900/20'
       case 'Negative': return 'text-red-600 bg-red-100 dark:bg-red-900/20'
-      case 'Mixed': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20'
       default: return 'text-gray-600 bg-gray-100 dark:bg-gray-900/20'
     }
   }
@@ -130,17 +129,28 @@ export default function Dashboard() {
       case 'positive': return '#10B981' // Green for Positive
       case 'negative': return '#EF4444' // Red for Negative
       case 'neutral': return '#6B7280'  // Gray for Neutral
-      case 'mixed': return '#F59E0B'    // Yellow for Mixed
       default: return '#9CA3AF'         // Default gray
     }
   }
 
+  // Process sentiment distribution to merge Mixed with Neutral
+  const processedSentimentData = analytics?.sentimentDistribution?.reduce((acc, item) => {
+    const sentiment = item._id === 'Mixed' ? 'Neutral' : item._id
+    const existing = acc.find(entry => entry._id === sentiment)
+    if (existing) {
+      existing.count += item.count
+    } else {
+      acc.push({ _id: sentiment, count: item.count })
+    }
+    return acc
+  }, []) || []
+
   const sentimentDistributionData = {
-    labels: analytics?.sentimentDistribution?.map(item => item._id) || [],
+    labels: processedSentimentData.map(item => item._id),
     datasets: [
       {
-        data: analytics?.sentimentDistribution?.map(item => item.count) || [],
-        backgroundColor: analytics?.sentimentDistribution?.map(item => getChartSentimentColor(item._id)) || [],
+        data: processedSentimentData.map(item => item.count),
+        backgroundColor: processedSentimentData.map(item => getChartSentimentColor(item._id)),
         borderWidth: 2,
         borderColor: '#ffffff',
       },
@@ -164,10 +174,28 @@ export default function Dashboard() {
     ],
   }
 
-  // Process trend data for meaningful visualization
-  const trendData = analytics?.sentimentTrend || []
+  // Process trend data for meaningful visualization (merge Mixed with Neutral)
+  const rawTrendData = analytics?.sentimentTrend?.map(item => ({
+    ...item,
+    _id: {
+      ...item._id,
+      sentiment: item._id.sentiment === 'Mixed' ? 'Neutral' : item._id.sentiment
+    }
+  })) || []
+  
+  // Aggregate counts for same date/sentiment combinations after transformation
+  const trendData = rawTrendData.reduce((acc, item) => {
+    const key = `${item._id.date}-${item._id.sentiment}`
+    const existing = acc.find(entry => `${entry._id.date}-${entry._id.sentiment}` === key)
+    if (existing) {
+      existing.count += item.count
+    } else {
+      acc.push(item)
+    }
+    return acc
+  }, [])
   const dates = [...new Set(trendData.map(item => item._id.date))].sort()
-  const sentiments = ['Positive', 'Negative', 'Neutral', 'Mixed']
+  const sentiments = ['Positive', 'Negative', 'Neutral']
   
   // Calculate sentiment percentages for more meaningful visualization
   const sentimentTrendData = {
@@ -177,7 +205,6 @@ export default function Dashboard() {
         'Positive': { border: '#10B981', bg: '#10B98120', fill: '#ECFDF5' },
         'Negative': { border: '#EF4444', bg: '#EF444420', fill: '#FEF2F2' },
         'Neutral': { border: '#6B7280', bg: '#6B728020', fill: '#F9FAFB' },
-        'Mixed': { border: '#F59E0B', bg: '#F59E0B20', fill: '#FFFBEB' }
       }
       
       return {

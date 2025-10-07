@@ -48,8 +48,8 @@ export default function HelpFAQ({ variant = "full" }) {
           answer: "You'll receive comprehensive analytics including sentiment distribution charts, language breakdown, trend analysis over time, and detailed reports for each document with confidence scores."
         },
         {
-          question: "How does the AI handle mixed sentiments?",
-          answer: "Our AI can detect complex emotional states and classify content as Mixed when it contains both positive and negative sentiments, providing a more nuanced understanding than simple positive/negative classification."
+          question: "How does the AI handle complex sentiments?",
+          answer: "Our AI analyzes content and classifies it as Positive, Negative, or Neutral. Content with both positive and negative elements is typically classified as Neutral, providing balanced sentiment analysis."
         }
       ]
     },

@@ -523,10 +523,21 @@ export const getDownloadUrl = asyncHandler(async (req, res) => {
 export const getAnalytics = asyncHandler(async (req, res) => {
   const userId = req.user._id
 
-  // Sentiment distribution
+  // Sentiment distribution (merge Mixed with Neutral)
   const sentimentDistribution = await Article.aggregate([
     { $match: { userId } },
-    { $group: { _id: '$contentSentiment', count: { $sum: 1 } } },
+    {
+      $addFields: {
+        normalizedSentiment: {
+          $cond: {
+            if: { $eq: ['$contentSentiment', 'Mixed'] },
+            then: 'Neutral',
+            else: '$contentSentiment'
+          }
+        }
+      }
+    },
+    { $group: { _id: '$normalizedSentiment', count: { $sum: 1 } } },
   ])
 
   // Sentiment trend over time (last 30 days)
@@ -536,10 +547,21 @@ export const getAnalytics = asyncHandler(async (req, res) => {
   const sentimentTrend = await Article.aggregate([
     { $match: { userId, createdAt: { $gte: thirtyDaysAgo } } },
     {
+      $addFields: {
+        normalizedSentiment: {
+          $cond: {
+            if: { $eq: ['$contentSentiment', 'Mixed'] },
+            then: 'Neutral',
+            else: '$contentSentiment'
+          }
+        }
+      }
+    },
+    {
       $group: {
         _id: {
           date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-          sentiment: '$contentSentiment',
+          sentiment: '$normalizedSentiment',
         },
         count: { $sum: 1 },
       },

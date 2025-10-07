@@ -32,7 +32,7 @@ export default function FeaturesSection({
     {
       icon: <Brain className="h-8 w-8 text-purple-600" />,
       title: 'AI-Powered Analysis',
-      description: 'Uses Azure OpenAI to classify sentiment as Positive, Negative, Neutral, or Mixed.',
+      description: 'Uses Azure OpenAI to classify sentiment as Positive, Negative, or Neutral.',
       details: 'Advanced GPT models provide nuanced understanding of context, sarcasm, and complex emotions'
     },
     {

@@ -119,7 +119,7 @@ export default function Navbar() {
                     : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
                 }`}
               >
-                Upload
+                Article Upload
               </Link>
               
               <Link
@@ -130,7 +130,7 @@ export default function Navbar() {
                     : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
                 }`}
               >
-                Compare News
+                Article Compare
               </Link>
 
               {user.role === 'admin' && (
