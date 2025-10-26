@@ -6,6 +6,7 @@ import userRoutes from './routes/userRoutes.js'
 import articleRoutes from './routes/articleRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
 import newsComparisonRoutes from './routes/newsComparisonRoutes.js'
+import newspaperRoutes from './routes/newspaperRoutes.js'
 import { notFound, errorHandler } from './middleware/errorMiddleware.js'
 
 dotenv.config()
@@ -25,6 +26,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/articles', articleRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/news-comparison', newsComparisonRoutes)
+app.use('/api/newspaper', newspaperRoutes)
 
 // Root
 app.get('/', (req, res) => {

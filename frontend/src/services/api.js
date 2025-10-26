@@ -222,4 +222,43 @@ export const adminAPI = {
   }
 }
 
+// Newspaper API
+export const newspaperAPI = {
+  // Upload newspaper
+  uploadNewspaper: async (formData) => {
+    const response = await api.post('/api/newspaper/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  },
+
+  // Get user's newspapers
+  getUserNewspapers: async (page = 1, limit = 10) => {
+    const response = await api.get(`/api/newspaper?page=${page}&limit=${limit}`)
+    return response.data
+  },
+
+  // Get newspaper by ID
+  getNewspaperById: async (id) => {
+    const response = await api.get(`/api/newspaper/${id}`)
+    return response.data
+  },
+
+  // Delete newspaper
+  deleteNewspaper: async (id) => {
+    const response = await api.delete(`/api/newspaper/${id}`)
+    return response.data
+  },
+
+  // Generate PDF report
+  generatePDFReport: async (id) => {
+    const response = await api.get(`/api/newspaper/${id}/pdf-report`, {
+      responseType: 'blob',
+    })
+    return response.data
+  },
+}
+
 export default api

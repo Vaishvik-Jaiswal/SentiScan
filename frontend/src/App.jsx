@@ -16,6 +16,8 @@ import ArticleDetail from './pages/ArticleDetail'
 import About from './pages/About'
 import AdminDashboard from './pages/AdminDashboard'
 import CompareNews from './pages/CompareNews'
+import NewspaperUpload from './pages/NewspaperUpload'
+import NewspaperDetail from './pages/NewspaperDetail'
 
 export default function App() {
   return (
@@ -65,6 +67,22 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <ArticleDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/newspaper-upload" 
+                element={
+                  <ProtectedRoute>
+                    <NewspaperUpload />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/newspaper/:id" 
+                element={
+                  <ProtectedRoute>
+                    <NewspaperDetail />
                   </ProtectedRoute>
                 } 
               />
