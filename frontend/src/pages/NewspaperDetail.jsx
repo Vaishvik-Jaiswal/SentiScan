@@ -118,14 +118,21 @@ const NewspaperDetail = () => {
     }
   }
 
+  // Sentiment data for charts and display
+  const sentimentData = newspaper ? {
+    positive: newspaper.sentimentDistribution?.positive || 0,
+    negative: newspaper.sentimentDistribution?.negative || 0,
+    neutral: newspaper.sentimentDistribution?.neutral || 0
+  } : { positive: 0, negative: 0, neutral: 0 }
+
   // Chart data
   const sentimentChartData = newspaper ? {
     labels: ['Positive', 'Negative', 'Neutral'],
     datasets: [{
       data: [
-        newspaper.sentimentDistribution?.positive || 0,
-        newspaper.sentimentDistribution?.negative || 0,
-        newspaper.sentimentDistribution?.neutral || 0
+        sentimentData.positive,
+        sentimentData.negative,
+        sentimentData.neutral
       ],
       backgroundColor: [
         'rgba(34, 197, 94, 0.8)',
@@ -365,63 +372,232 @@ const NewspaperDetail = () => {
               </div>
             </div>
 
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Sentiment Distribution */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
-                  Sentiment Distribution
-                </h3>
-                {sentimentChartData && (
-                  <div className="h-80">
-                    <Pie 
-                      data={sentimentChartData}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            position: 'bottom',
-                            labels: {
-                              padding: 20,
-                              usePointStyle: true,
+            {/* Enhanced Charts Section */}
+            <div className="space-y-8 mb-8">
+              {/* Primary Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Sentiment Distribution */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
+                    Sentiment Distribution
+                  </h3>
+                  {sentimentChartData && (
+                    <div className="h-80">
+                      <Pie 
+                        data={sentimentChartData}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'bottom',
+                              labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                              }
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                  return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                              }
                             }
                           }
-                        }
-                      }}
-                    />
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">{sentimentData.positive}</div>
+                      <div className="text-sm text-green-700 dark:text-green-400">Positive</div>
+                    </div>
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-red-600">{sentimentData.negative}</div>
+                      <div className="text-sm text-red-700 dark:text-red-400">Negative</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-600">{sentimentData.neutral}</div>
+                      <div className="text-sm text-gray-700 dark:text-gray-400">Neutral</div>
+                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* Language Distribution */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <Globe className="h-5 w-5 mr-2 text-green-600" />
+                    Language Distribution
+                  </h3>
+                  {languageChartData && (
+                    <div className="h-80">
+                      <Bar 
+                        data={languageChartData}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              display: false
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = ((context.parsed.y / total) * 100).toFixed(1);
+                                  return `${context.parsed.y} articles (${percentage}%)`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: {
+                                stepSize: 1
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="mt-4 text-center">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Dominant Language: <span className="font-semibold text-gray-900 dark:text-white">
+                        {getLanguageDisplay(newspaper.dominantLanguage)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Language Distribution */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Globe className="h-5 w-5 mr-2 text-green-600" />
-                  Language Distribution
-                </h3>
-                {languageChartData && (
-                  <div className="h-80">
-                    <Bar 
-                      data={languageChartData}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            display: false
-                          }
-                        },
-                        scales: {
-                          y: {
-                            beginAtZero: true
-                          }
-                        }
-                      }}
-                    />
+              {/* Secondary Analytics */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Article Length Analysis */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <FileText className="h-5 w-5 mr-2 text-purple-600" />
+                    Article Lengths
+                  </h3>
+                  {newspaper.articles && (
+                    <div className="space-y-3">
+                      {(() => {
+                        const wordCounts = newspaper.articles.map(a => a.wordCount || 0);
+                        const avgLength = Math.round(wordCounts.reduce((a, b) => a + b, 0) / wordCounts.length);
+                        const shortArticles = wordCounts.filter(count => count <= 100).length;
+                        const mediumArticles = wordCounts.filter(count => count > 100 && count <= 300).length;
+                        const longArticles = wordCounts.filter(count => count > 300).length;
+                        
+                        return (
+                          <>
+                            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                              <div className="text-2xl font-bold text-purple-600">{avgLength}</div>
+                              <div className="text-sm text-purple-700 dark:text-purple-400">Avg Words</div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Short (≤100)</span>
+                                <span className="font-semibold">{shortArticles}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Medium (101-300)</span>
+                                <span className="font-semibold">{mediumArticles}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Long (300+)</span>
+                                <span className="font-semibold">{longArticles}</span>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Confidence Analysis */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <BarChart3 className="h-5 w-5 mr-2 text-orange-600" />
+                    Analysis Confidence
+                  </h3>
+                  {newspaper.articles && (
+                    <div className="space-y-3">
+                      {(() => {
+                        const highConf = newspaper.articles.filter(a => a.sentimentConfidence === 'high').length;
+                        const mediumConf = newspaper.articles.filter(a => a.sentimentConfidence === 'medium').length;
+                        const lowConf = newspaper.articles.filter(a => a.sentimentConfidence === 'low').length;
+                        const total = newspaper.articles.length;
+                        
+                        return (
+                          <>
+                            <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                              <div className="text-2xl font-bold text-orange-600">
+                                {total > 0 ? Math.round((highConf / total) * 100) : 0}%
+                              </div>
+                              <div className="text-sm text-orange-700 dark:text-orange-400">High Confidence</div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">High</span>
+                                <span className="font-semibold text-green-600">{highConf}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Medium</span>
+                                <span className="font-semibold text-yellow-600">{mediumConf}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Low</span>
+                                <span className="font-semibold text-red-600">{lowConf}</span>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Quality Metrics */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
+                    Quality Metrics
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {newspaper.analysisMetrics?.qualityScore || 0}
+                      </div>
+                      <div className="text-sm text-blue-700 dark:text-blue-400">Quality Score</div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Total Words</span>
+                        <span className="font-semibold">
+                          {newspaper.analysisMetrics?.totalWordCount?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Avg Length</span>
+                        <span className="font-semibold">
+                          {newspaper.analysisMetrics?.averageArticleLength || 0} words
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Languages</span>
+                        <span className="font-semibold">
+                          {Object.keys(newspaper.languageBreakdown || {}).length}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
