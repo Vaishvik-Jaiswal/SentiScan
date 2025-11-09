@@ -45,7 +45,7 @@ class TextExtractorService {
 
   async getOrCreateWorker(language = 'eng+hin+guj') {
     const workerId = `worker_${this.currentWorker}`
-    
+
     if (!this.workerPool.has(workerId)) {
       console.log(`🔧 Creating new Tesseract worker: ${workerId} with languages: ${language}`)
       const worker = await Tesseract.createWorker(language, 1, {
@@ -61,14 +61,14 @@ class TextExtractorService {
       })
       this.workerPool.set(workerId, worker)
     }
-    
+
     this.currentWorker = (this.currentWorker + 1) % this.maxWorkers
     return this.workerPool.get(workerId)
   }
 
   async extractText(buffer, fileType, originalName) {
     console.log(`📄 Extracting text from ${fileType} file: ${originalName}`)
-    
+
     try {
       let extractedText = ''
       let heading = ''
@@ -77,7 +77,7 @@ class TextExtractorService {
         case 'pdf':
           console.log('📄 Processing PDF file with image conversion approach...')
           console.log(`📊 PDF buffer info: size=${buffer.length} bytes`)
-          
+
           extractedText = await this.extractTextFromPDFWithOCR(buffer, originalName)
           console.log(`✅ PDF OCR processing completed: ${extractedText.length} characters`)
           break
@@ -117,7 +117,7 @@ class TextExtractorService {
         console.log(`⚠️ No text extracted from ${fileType} file, using filename as content`)
         extractedText = `This is a ${fileType.toUpperCase()} document named "${originalName}". The file appears to be image-based, protected, or could not be processed for text extraction.`
       }
-      
+
       // Handle very short extractions (likely scanned PDFs)
       else if (extractedText.trim().length < 20) {
         console.log(`⚠️ Very short text extraction (${extractedText.trim().length} chars), enhancing with metadata`)
@@ -129,7 +129,7 @@ class TextExtractorService {
       try {
         console.log('🔍 Attempting AI heading extraction...')
         console.log(`📝 Text preview for heading extraction: "${extractedText.substring(0, 300)}..."`)
-        
+
         if (!extractedText || extractedText.trim().length < 10) {
           console.log('⚠️ Text too short for AI heading extraction, using fallback')
           heading = this.generateFallbackHeading(originalName, extractedText)
@@ -142,13 +142,13 @@ class TextExtractorService {
         console.log('🔄 Using fallback heading generation...')
         heading = this.generateFallbackHeading(originalName, extractedText)
       }
-      
+
       // Ensure we always have a heading
       if (!heading || heading.trim().length === 0) {
         console.log('⚠️ No heading generated, creating final fallback...')
         heading = this.generateFallbackHeading(originalName, extractedText)
       }
-      
+
       console.log(`📰 Final heading: "${heading}"`)
 
       // Clean up the text
@@ -176,17 +176,17 @@ class TextExtractorService {
 
   async extractHeadingWithAI(text) {
     console.log('🤖 Extracting heading using Azure OpenAI...')
-    
+
     // Check if we have meaningful text to work with
     if (!text || text.trim().length < 10) {
       console.log('⚠️ No meaningful text available for heading extraction')
       return 'Document Content'
     }
-    
+
     // First, detect the language of the article
     const detectedLanguage = this.detectLanguage(text)
     console.log(`🌐 Detected article language: ${detectedLanguage}`)
-    
+
     // Fallback method for when AI is not available
     const fallbackHeading = () => {
       console.log('⚠️ Using fallback heading extraction...')
@@ -195,7 +195,7 @@ class TextExtractorService {
         console.log('⚠️ No lines found in text, using default heading')
         return 'Document Content'
       }
-      
+
       // Enhanced OCR-specific patterns to skip
       const skipPatterns = [
         /main paper/i,
@@ -220,34 +220,34 @@ class TextExtractorService {
         /^\s*\d+\s*$/, // Just numbers
         /^[^\w\u0900-\u097F\u0A80-\u0AFF]+$/, // Only punctuation
       ]
-      
+
       // Try to find a good heading by analyzing more lines
       for (let i = 0; i < Math.min(lines.length, 25); i++) {
         let line = lines[i].trim()
-        
+
         // Skip if too short or too long
         if (line.length < 15 || line.length > 200) continue
-        
+
         // Check against all skip patterns
         const shouldSkip = skipPatterns.some(pattern => pattern.test(line))
         if (shouldSkip) {
           console.log(`⏭️ Fallback skipping: "${line.substring(0, 50)}..."`)
           continue
         }
-        
+
         // Skip all-caps section headers (but allow proper headlines)
         if (line === line.toUpperCase() && line.length < 50 && !line.includes(' ')) {
           console.log(`📢 Fallback skipping caps: "${line}"`)
           continue
         }
-        
+
         // Language-specific headline detection
         if (detectedLanguage === 'hindi' || detectedLanguage === 'gujarati') {
           const hasDevanagari = /[\u0900-\u097F]/.test(line)
           const hasGujarati = /[\u0A80-\u0AFF]/.test(line)
-          
-          if ((detectedLanguage === 'hindi' && hasDevanagari) || 
-              (detectedLanguage === 'gujarati' && hasGujarati)) {
+
+          if ((detectedLanguage === 'hindi' && hasDevanagari) ||
+            (detectedLanguage === 'gujarati' && hasGujarati)) {
             const heading = line.length > 100 ? line.substring(0, 100) + '...' : line
             console.log(`✅ Fallback found ${detectedLanguage} heading: "${heading}"`)
             return heading
@@ -257,7 +257,7 @@ class TextExtractorService {
           const hasActionWords = /\b(announces?|launches?|wins?|loses?|introduces?|reveals?|confirms?|denies?|reports?|says?|claims?|begins?|ends?|starts?|completes?|approves?|rejects?|implements?|inaugurates?|celebrates?)\b/i.test(line)
           const hasProperStructure = /^[A-Z].*[a-z].*/.test(line) && line.split(' ').length >= 3
           const hasNewsIndicators = /\b(government|minister|president|prime|chief|committee|court|supreme|high|parliament|assembly|budget|policy|scheme|project|program|initiative)\b/i.test(line)
-          
+
           if (hasActionWords || (hasProperStructure && hasNewsIndicators) || hasProperStructure) {
             const heading = line.length > 100 ? line.substring(0, 100) + '...' : line
             console.log(`✅ Fallback found English heading: "${heading}"`)
@@ -265,7 +265,7 @@ class TextExtractorService {
           }
         }
       }
-      
+
       // Last resort: use first non-skipped line
       for (let i = 0; i < Math.min(lines.length, 25); i++) {
         let line = lines[i].trim()
@@ -278,29 +278,29 @@ class TextExtractorService {
           }
         }
       }
-      
+
       // Absolute last resort: use first meaningful line
       const lastResort = lines.find(line => line.trim().length > 10)?.trim()
       console.log(`⚠️ Fallback last resort: "${lastResort}"`)
       return lastResort || 'Untitled'
     }
-    
+
     try {
       // Force initialization of OpenAI
       const openaiClient = sentimentAnalysis.openai
-      
+
       // Double-check if OpenAI is configured
       if (!openaiClient) {
         console.log('⚠️ Azure OpenAI client not available, using fallback heading extraction')
         return fallbackHeading()
       }
-      
+
       // Use the full content for better context
       const textSample = text.substring(0, 4000) // Increased to 4000 chars
-      
+
       // Create a language-specific prompt
       let languageSpecificInstructions = ''
-      
+
       if (detectedLanguage === 'hindi') {
         languageSpecificInstructions = `
 - The article appears to be in Hindi (Devanagari script)
@@ -321,7 +321,7 @@ class TextExtractorService {
 - Extract the headline in English
 - Ignore any non-English text in headers or metadata`
       }
-      
+
       const systemPrompt = {
         role: 'system',
         content: `You are an expert multilingual newspaper headline extractor. Your task is to analyze OCR-scanned newspaper text and extract ONLY the main headline.
@@ -372,7 +372,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
 
       console.log('📤 Sending heading extraction request to Azure OpenAI...')
       console.log('📝 Text sample (first 200 chars):', textSample.substring(0, 200) + '...')
-      
+
       const response = await openaiClient.chat.completions.create({
         model: process.env.AZURE_OPENAI_DEPLOYMENT,
         messages: [systemPrompt, userPrompt],
@@ -382,12 +382,12 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
 
       const extractedHeading = response.choices[0]?.message?.content?.trim()
       console.log('🔄 Raw AI response:', extractedHeading)
-      
+
       if (!extractedHeading || extractedHeading.toLowerCase() === 'untitled' || extractedHeading.length < 5) {
         console.log('⚠️ OpenAI could not extract a clear heading, using fallback')
         return fallbackHeading()
       }
-      
+
       // Clean up the extracted heading
       let heading = extractedHeading
         .replace(/^["']|["']$/g, '') // Remove surrounding quotes
@@ -396,7 +396,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
         .replace(/^Output:\s*/i, '') // Remove "Output:" prefix
         .replace(/^Headline:\s*/i, '') // Remove "Headline:" prefix
         .trim()
-      
+
       // Enhanced invalid pattern checking
       const invalidPatterns = [
         /NEW DELHI,?\s+[A-Za-z]+\s+\d+\s*\([A-Z]+\)/i,
@@ -409,42 +409,42 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
         /\(PTI\)|\(ANI\)|\(UNI\)/i,
         /gujarat samachar|sandesh|divya bhaskar/i,
       ]
-      
+
       const isInvalidHeading = invalidPatterns.some(pattern => pattern.test(heading))
-      
+
       if (isInvalidHeading) {
         console.log('⚠️ AI returned invalid heading (metadata), using fallback')
         return fallbackHeading()
       }
-      
+
       // Enhanced language validation
       const hasDevanagari = /[\u0900-\u097F]/.test(heading)
       const hasGujarati = /[\u0A80-\u0AFF]/.test(heading)
       const hasLatin = /[a-zA-Z]/.test(heading)
-      
+
       if (detectedLanguage === 'hindi' && !hasDevanagari && hasLatin) {
         console.log('⚠️ Expected Hindi heading but got non-Devanagari script, using fallback')
         return fallbackHeading()
       }
-      
+
       if (detectedLanguage === 'gujarati' && !hasGujarati && hasLatin) {
         console.log('⚠️ Expected Gujarati heading but got non-Gujarati script, using fallback')
         return fallbackHeading()
       }
-      
+
       if (detectedLanguage === 'english' && (!hasLatin || (hasDevanagari || hasGujarati) && !hasLatin)) {
         console.log('⚠️ Expected English heading but got non-Latin script, using fallback')
         return fallbackHeading()
       }
-      
+
       // Truncate if too long
       if (heading.length > 150) {
         heading = heading.substring(0, 150) + '...'
       }
-      
+
       console.log(`✅ AI extracted heading in ${detectedLanguage}: "${heading}"`)
       return heading
-      
+
     } catch (error) {
       console.error('❌ Error extracting heading with AI:', error)
       console.error('❌ Error details:', error.message)
@@ -455,85 +455,85 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
 
   detectLanguage(text) {
     console.log('🔍 Detecting language from text...')
-    
+
     // Use a larger sample for more accurate detection
     const sample = text.substring(0, 3000).toLowerCase()
-    
+
     // Enhanced language pattern detection
     const hindiPattern = /[\u0900-\u097F]/g
     const gujaratiPattern = /[\u0A80-\u0AFF]/g
     const englishPattern = /[a-z]/g
-    
+
     // Additional patterns for better detection
     const hindiWords = /\b(और|है|में|के|से|को|का|की|पर|एक|यह|वह|भारत|सरकार|मंत्री|प्रधान|राज्य)\b/gi
     const gujaratiWords = /\b(અને|છે|માં|ના|થી|ને|ની|પર|એક|આ|તે|ભારત|સરકાર|મંત્રી|પ્રધાન|રાજ્ય)\b/gi
     const englishWords = /\b(and|is|in|of|to|the|a|an|this|that|india|government|minister|prime|state|new|said|will|has|been)\b/gi
-    
+
     const hindiMatches = (sample.match(hindiPattern) || []).length
     const gujaratiMatches = (sample.match(gujaratiPattern) || []).length
     const englishMatches = (sample.match(englishPattern) || []).length
-    
+
     const hindiWordMatches = (sample.match(hindiWords) || []).length
     const gujaratiWordMatches = (sample.match(gujaratiWords) || []).length
     const englishWordMatches = (sample.match(englishWords) || []).length
-    
+
     const total = hindiMatches + gujaratiMatches + englishMatches
-    
+
     console.log(`📊 Language detection results:`, {
       hindi: { chars: hindiMatches, words: hindiWordMatches },
       gujarati: { chars: gujaratiMatches, words: gujaratiWordMatches },
       english: { chars: englishMatches, words: englishWordMatches },
       total: total
     })
-    
+
     if (total === 0) {
       return 'unknown'
     }
-    
+
     // Calculate weighted scores (characters + word matches * 3)
     const hindiScore = hindiMatches + (hindiWordMatches * 3)
     const gujaratiScore = gujaratiMatches + (gujaratiWordMatches * 3)
     const englishScore = englishMatches + (englishWordMatches * 2) // Less weight for English words
-    
+
     const totalScore = hindiScore + gujaratiScore + englishScore
-    
+
     if (totalScore === 0) {
       return 'unknown'
     }
-    
+
     // Calculate percentages
     const hindiPercent = (hindiScore / totalScore) * 100
     const gujaratiPercent = (gujaratiScore / totalScore) * 100
     const englishPercent = (englishScore / totalScore) * 100
-    
+
     console.log(`📊 Language score percentages:`, {
       hindi: `${hindiPercent.toFixed(1)}%`,
       gujarati: `${gujaratiPercent.toFixed(1)}%`,
       english: `${englishPercent.toFixed(1)}%`
     })
-    
+
     // Determine dominant language with improved thresholds
     const nonLatinThreshold = 35 // Lowered threshold for better detection
     const latinThreshold = 50
-    
+
     if (hindiPercent >= nonLatinThreshold && hindiPercent > gujaratiPercent && hindiPercent > englishPercent) {
       console.log(`✅ Detected language: Hindi (${hindiPercent.toFixed(1)}%)`)
       return 'hindi'
     }
-    
+
     if (gujaratiPercent >= nonLatinThreshold && gujaratiPercent > hindiPercent && gujaratiPercent > englishPercent) {
       console.log(`✅ Detected language: Gujarati (${gujaratiPercent.toFixed(1)}%)`)
       return 'gujarati'
     }
-    
+
     if (englishPercent >= latinThreshold) {
       console.log(`✅ Detected language: English (${englishPercent.toFixed(1)}%)`)
       return 'english'
     }
-    
+
     // If no clear winner, use the highest percentage
     const maxPercent = Math.max(hindiPercent, gujaratiPercent, englishPercent)
-    
+
     if (maxPercent === hindiPercent && hindiPercent > 15) {
       console.log(`✅ Detected primary language: Hindi (${hindiPercent.toFixed(1)}%)`)
       return 'hindi'
@@ -546,7 +546,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       console.log(`✅ Detected primary language: English (${englishPercent.toFixed(1)}%)`)
       return 'english'
     }
-    
+
     // Final fallback
     console.log(`⚠️ Could not determine language clearly, defaulting to English`)
     return 'english'
@@ -555,14 +555,14 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
   generateFallbackHeading(originalName, extractedText) {
     console.log('🔄 Generating fallback heading...')
     console.log(`📝 Available text length: ${extractedText?.length || 0} characters`)
-    
+
     // If we have some text, try to extract a meaningful heading
     if (extractedText && extractedText.trim().length > 5) {
       console.log(`📰 Attempting to extract heading from text: "${extractedText.substring(0, 200)}..."`)
-      
+
       const lines = extractedText.split(/[\n\r]/).map(line => line.trim()).filter(line => line.length > 3)
       console.log(`📄 Found ${lines.length} text lines`)
-      
+
       if (lines.length > 0) {
         // Look for the best line to use as heading
         for (const line of lines) {
@@ -580,7 +580,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             }
           }
         }
-        
+
         // If no good single line, try first few words
         const allWords = extractedText.trim().split(/\s+/).filter(word => word.length > 1)
         if (allWords.length >= 3) {
@@ -590,7 +590,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
         }
       }
     }
-    
+
     // If no meaningful text, generate heading from filename
     const baseName = originalName.replace(/\.[^/.]+$/, "") // Remove extension
     const heading = `Newspaper Article: ${baseName}`
@@ -629,28 +629,28 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     console.log('🔄 Converting PDF to images for OCR processing...')
     console.log(`📊 PDF buffer size: ${buffer.length} bytes`)
     console.log('🗞️ Optimizing for newspaper article image processing...')
-    
+
     let extractedText = ''
     const tempPath = this.ensureTempDirectory()
     console.log(`📁 Using temp directory: ${tempPath}`)
-    
+
     // Try multiple PDF to image conversion approaches
     const approaches = [
       { name: 'PDF-Poppler', method: 'poppler' },
       { name: 'PDF2Pic', method: 'pdf2pic' },
     ]
-    
+
     for (const approach of approaches) {
       let imagePaths = []
       let tempPdfPath = null
       try {
         console.log(`🔄 Attempting PDF conversion with ${approach.name}...`)
-        
+
         if (approach.method === 'poppler') {
           // Method 1: Use pdf-poppler (often better for scanned documents)
           tempPdfPath = path.join(tempPath, `temp_${Date.now()}.pdf`)
           fs.writeFileSync(tempPdfPath, buffer)
-          
+
           const options = {
             format: 'png',
             out_dir: tempPath,
@@ -659,10 +659,10 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             resolution_x: 300,
             resolution_y: 300
           }
-          
+
           console.log('📄 Converting with PDF-Poppler...')
           await pdfPoppler.convert(tempPdfPath, options)
-          
+
           // Collect generated image paths
           imagePaths = fs.readdirSync(tempPath)
             .filter(file => file.startsWith('page-') && file.endsWith('.png'))
@@ -672,9 +672,9 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
               return pageA - pageB
             })
             .map(file => path.join(tempPath, file))
-          
+
           console.log(`✅ PDF-Poppler conversion successful: ${imagePaths.length} pages`)
-          
+
         } else if (approach.method === 'pdf2pic') {
           // Method 2: Use pdf2pic as fallback
           const convertOptions = {
@@ -684,11 +684,11 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             savedir: tempPath,
             savename: "page"
           }
-          
+
           console.log('📄 Converting with PDF2Pic...')
           const convert = pdf2pic.fromBuffer(buffer, convertOptions)
           const pageOutputs = await convert.bulk(-1)
-          
+
           if (pageOutputs && pageOutputs.length > 0) {
             imagePaths = pageOutputs.map(output => output.path)
             // Sort by page number if necessary
@@ -700,7 +700,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             console.log(`✅ PDF2Pic conversion successful: ${imagePaths.length} pages`)
           }
         }
-        
+
         if (imagePaths.length > 0) {
           const pageTexts = []
           for (const imagePath of imagePaths) {
@@ -710,15 +710,15 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             pageTexts.push(pageText)
             fs.unlinkSync(imagePath) // Clean up immediately
           }
-          
+
           extractedText = pageTexts.join('\n\n')
           console.log(`✅ Combined text from ${pageTexts.length} pages: ${extractedText.length} characters`)
-          
+
           break // Success, exit the loop
         } else {
           console.log(`❌ ${approach.name} conversion failed - no images produced`)
         }
-        
+
       } catch (error) {
         console.error(`❌ ${approach.name} conversion failed:`, error.message)
       } finally {
@@ -728,10 +728,10 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
         }
       }
     }
-    
+
     // Clean up any remaining temporary files
     this.cleanupTempFiles()
-    
+
     if (extractedText.trim().length > 10) {
       return extractedText.trim()
     } else {
@@ -742,13 +742,13 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
   async extractTextFromImage(buffer, fileType) {
     try {
       console.log('🖼️ Starting enhanced OCR process...')
-      
+
       // Enhanced image preprocessing for newspaper text
       let processedBuffers = []
-      
+
       try {
         console.log('🔧 Advanced preprocessing with Sharp...')
-        
+
         // Get image metadata for adaptive processing
         const metadata = await sharp(buffer).metadata()
         console.log('📏 Image metadata:', {
@@ -757,10 +757,10 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
           density: metadata.density,
           channels: metadata.channels
         })
-        
+
         // Create multiple processed versions for better OCR results
         const baseImage = sharp(buffer)
-        
+
         // Version 1: High contrast, denoised
         const version1 = await baseImage
           .clone()
@@ -775,7 +775,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
           .median(2) // Remove noise
           .png({ quality: 100, compressionLevel: 0 })
           .toBuffer()
-        
+
         // Version 2: Threshold for high contrast text
         const version2 = await baseImage
           .clone()
@@ -789,7 +789,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
           .threshold(128) // Binary threshold
           .png({ quality: 100, compressionLevel: 0 })
           .toBuffer()
-        
+
         // Version 3: Enhanced sharpening for scanned text
         const version3 = await baseImage
           .clone()
@@ -803,18 +803,18 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
           .gamma(0.8) // Adjust gamma for better text visibility
           .png({ quality: 100, compressionLevel: 0 })
           .toBuffer()
-        
+
         processedBuffers = [
           { buffer: version1, name: 'enhanced' },
           { buffer: version2, name: 'threshold' },
           { buffer: version3, name: 'sharpened' },
           { buffer: buffer, name: 'original' }
         ]
-        
+
         console.log('✅ Created 4 image processing variants')
       } catch (sharpError) {
         console.log('⚠️ Sharp preprocessing failed, using simpler approach:', sharpError.message)
-        
+
         // Fallback: simpler preprocessing
         try {
           const simpleProcessed = await sharp(buffer)
@@ -822,7 +822,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             .normalize()
             .png()
             .toBuffer()
-          
+
           processedBuffers = [
             { buffer: simpleProcessed, name: 'simple' },
             { buffer: buffer, name: 'original' }
@@ -839,15 +839,15 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       console.log(`🌐 Using OCR languages: ${languages}`)
 
       let bestResult = { text: '', confidence: 0 }
-      
+
       // Try OCR on each processed version
       for (const { buffer: procBuffer, name } of processedBuffers) {
         try {
           console.log(`👁️ Running Tesseract OCR on ${name} version...`)
-          
+
           // Get or create worker for this language set
           const worker = await this.getOrCreateWorker(languages)
-          
+
           // Set only parameters that can be changed after initialization
           await worker.setParameters({
             tessedit_char_whitelist: '', // Allow all characters
@@ -860,24 +860,24 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             allow_blob_division: '1',
             classify_enable_adaptive_debugger: '0',
           })
-          
+
           const { data: { text, confidence } } = await worker.recognize(procBuffer)
 
           console.log(`📊 OCR Results for ${name}: confidence=${confidence?.toFixed(1)}%, length=${text.trim().length}`)
-          
+
           // Keep the result with highest confidence or longest meaningful text
-          if (confidence > bestResult.confidence || 
-              (text.trim().length > bestResult.text.trim().length * 1.5 && confidence > 50)) {
+          if (confidence > bestResult.confidence ||
+            (text.trim().length > bestResult.text.trim().length * 1.5 && confidence > 50)) {
             bestResult = { text: text.trim(), confidence }
             console.log(`🏆 New best result from ${name} version`)
           }
-          
+
           // If we got very high confidence, no need to try other versions
           if (confidence > 90 && text.trim().length > 100) {
             console.log(`✨ Excellent OCR result achieved, stopping early`)
             break
           }
-          
+
         } catch (ocrError) {
           console.log(`⚠️ OCR failed on ${name} version:`, ocrError.message)
           continue
@@ -889,12 +889,12 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       }
 
       console.log(`✅ Best OCR result: confidence=${bestResult.confidence?.toFixed(1)}%, length=${bestResult.text.length}`)
-      
+
       // Post-process the OCR result
       let finalText = this.postProcessOCRText(bestResult.text)
-      
+
       return finalText
-      
+
     } catch (error) {
       console.error('❌ Enhanced OCR Error:', error)
       throw new Error(`Failed to extract text from image: ${error.message}`)
@@ -903,7 +903,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
 
   postProcessOCRText(text) {
     console.log('🔧 Post-processing OCR text...')
-    
+
     // Common OCR error corrections
     let processed = text
       // Fix common character substitutions
@@ -932,7 +932,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       // Fix punctuation spacing
       .replace(/([a-zA-Z\u0900-\u097F\u0A80-\u0AFF])([.!?,:;])/g, '$1$2') // Remove space before punctuation
       .replace(/([.!?,:;])([a-zA-Z\u0900-\u097F\u0A80-\u0AFF])/g, '$1 $2') // Add space after punctuation
-      
+
     // Remove very short lines that are likely OCR artifacts
     const lines = processed.split('\n')
     const filteredLines = lines.filter(line => {
@@ -940,11 +940,11 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       // Keep lines that are longer than 3 characters or contain meaningful characters
       return trimmed.length > 3 || /[a-zA-Z\u0900-\u097F\u0A80-\u0AFF]{2,}/.test(trimmed)
     })
-    
+
     processed = filteredLines.join('\n').trim()
-    
+
     console.log(`🔧 Post-processing completed: ${text.length} -> ${processed.length} characters`)
-    
+
     return processed
   }
 
