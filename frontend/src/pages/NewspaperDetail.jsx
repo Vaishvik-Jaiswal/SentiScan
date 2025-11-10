@@ -19,6 +19,7 @@ import {
 import { toast } from 'react-toastify'
 import { newspaperAPI } from '../services/api'
 import { Pie, Bar, Doughnut } from 'react-chartjs-2'
+import ProcessingProgress from '../components/ProcessingProgress'
 import {
   Chart as ChartJS,
   ArcElement,
@@ -49,12 +50,12 @@ const NewspaperDetail = () => {
 
   useEffect(() => {
     fetchNewspaper()
-    // Auto-refresh if still processing
+    // Auto-refresh if still processing - more frequent updates
     const interval = setInterval(() => {
       if (newspaper?.processingStatus === 'processing') {
         fetchNewspaper(true)
       }
-    }, 10000) // Check every 10 seconds
+    }, 5000) // Check every 5 seconds for better user experience
 
     return () => clearInterval(interval)
   }, [id, newspaper?.processingStatus])
@@ -168,10 +169,22 @@ const NewspaperDetail = () => {
     }]
   } : null
 
-  if (loading) {
+  if (loading && !newspaper) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Loading Newspaper Details...
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Please wait while we fetch your newspaper analysis
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -270,38 +283,14 @@ const NewspaperDetail = () => {
           </div>
         </div>
 
-        {/* Status Banner */}
-        {newspaper.processingStatus !== 'completed' && (
-          <div className={`mb-8 p-4 rounded-lg border ${
-            newspaper.processingStatus === 'processing' 
-              ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700' 
-              : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700'
-          }`}>
-            <div className="flex items-center">
-              {getStatusIcon(newspaper.processingStatus)}
-              <div className="ml-3">
-                <h3 className={`font-medium ${
-                  newspaper.processingStatus === 'processing' 
-                    ? 'text-blue-800 dark:text-blue-200' 
-                    : 'text-red-800 dark:text-red-200'
-                }`}>
-                  {newspaper.processingStatus === 'processing' 
-                    ? 'Analysis in Progress' 
-                    : 'Analysis Failed'
-                  }
-                </h3>
-                <p className={`text-sm ${
-                  newspaper.processingStatus === 'processing' 
-                    ? 'text-blue-600 dark:text-blue-300' 
-                    : 'text-red-600 dark:text-red-300'
-                }`}>
-                  {newspaper.processingStatus === 'processing' 
-                    ? 'Your newspaper is being analyzed. This may take several minutes...' 
-                    : newspaper.processingError || 'An error occurred during analysis.'
-                  }
-                </p>
-              </div>
-            </div>
+        {/* Enhanced Processing Status */}
+        {newspaper && newspaper.processingStatus !== 'completed' && (
+          <div className="mb-8">
+            <ProcessingProgress 
+              newspaper={newspaper} 
+              onRefresh={() => fetchNewspaper(true)}
+              refreshing={refreshing}
+            />
           </div>
         )}
 

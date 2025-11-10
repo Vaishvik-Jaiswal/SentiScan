@@ -640,6 +640,30 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
       console.error('❌ Error analyzing sentiment with Azure OpenAI:', error)
       console.error('❌ Error details:', error.message)
       
+      // Check if it's a content policy violation
+      const isContentPolicyViolation = error.message && (
+        error.message.includes('content management policy') ||
+        error.message.includes('content filtering') ||
+        error.message.includes('content policy') ||
+        error.message.includes('filtered due to the prompt')
+      )
+      
+      if (isContentPolicyViolation) {
+        console.log('🔄 Content policy violation detected, using enhanced local analysis')
+        // For content policy violations, use a more conservative local analysis
+        const headingLocal = this.analyzeLocalSentimentConservative(heading)
+        const contentLocal = this.analyzeLocalSentimentConservative(content)
+        
+        return {
+          headingSentiment: headingLocal.sentiment,
+          headingSentimentReason: `Local analysis (AI blocked): ${headingLocal.reason}`,
+          contentSentiment: contentLocal.sentiment,
+          contentSentimentReason: `Local analysis (AI blocked): ${contentLocal.reason}`,
+          confidence: 'medium',
+          method: 'local_content_policy_fallback'
+        }
+      }
+      
       // Fallback to local analysis if AI fails
       console.log('🔄 AI failed, falling back to local sentiment analysis')
       const headingLocal = this.analyzeLocalSentiment(heading)
@@ -647,15 +671,59 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
       
       return {
         headingSentiment: headingLocal.sentiment,
-        headingSentimentReason: `${headingLocal.reason} (AI analysis failed: ${error.message})`,
+        headingSentimentReason: `Local fallback: ${headingLocal.reason}`,
         contentSentiment: contentLocal.sentiment,
-        contentSentimentReason: `${contentLocal.reason} (AI analysis failed: ${error.message})`,
-        confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'medium' : 'low',
-        error: error.message,
+        contentSentimentReason: `Local fallback: ${contentLocal.reason}`,
+        confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'high' : 
+                   headingLocal.confidence === 'medium' || contentLocal.confidence === 'medium' ? 'medium' : 'low',
         method: 'local_fallback'
       }
     }
   }
+
+  // Conservative local sentiment analysis for content policy violations
+  analyzeLocalSentimentConservative(text) {
+    if (!text || typeof text !== 'string') {
+      return { sentiment: 'Neutral', score: 0, confidence: 'low', reason: 'No text provided' }
+    }
+
+    // For sensitive content, be more conservative and lean towards neutral
+    const result = this.analyzeLocalSentiment(text)
+    
+    // If the content triggered a policy violation, it's likely sensitive
+    // Be more conservative in classification
+    if (result.sentiment === 'Positive' && result.confidence === 'low') {
+      return {
+        sentiment: 'Neutral',
+        score: 0,
+        confidence: 'medium',
+        reason: 'Conservative classification due to sensitive content - avoiding positive misclassification'
+      }
+    }
+    
+    if (result.sentiment === 'Negative' && result.confidence === 'low') {
+      return {
+        sentiment: 'Neutral',
+        score: 0,
+        confidence: 'medium',
+        reason: 'Conservative classification due to sensitive content - avoiding negative misclassification'
+      }
+    }
+    
+    // Only allow strong sentiment classifications for sensitive content
+    if (result.confidence === 'low') {
+      return {
+        sentiment: 'Neutral',
+        score: 0,
+        confidence: 'medium',
+        reason: 'Conservative neutral classification for sensitive content'
+      }
+    }
+    
+    return result
+  }
+
+  // The analyzeLocalSentiment method is already defined above at line 258
 
 
 

@@ -92,14 +92,82 @@ export const uploadNewspaper = asyncHandler(async (req, res) => {
   }
 })
 
+// Function to process newspaper with proper status updates
+const processNewspaperWithStatusUpdates = async (newspaperId, filePath, newspaperName) => {
+  console.log('📄 Step 1: Text extraction in progress...')
+  
+  // Extract raw text from PDF
+  const rawText = await newspaperProcessor.extractTextFromPDF(filePath)
+  
+  // Step 2: Language Detection
+  await Newspaper.findByIdAndUpdate(newspaperId, {
+    processingStep: 'language',
+    processingMessage: 'Detecting dominant language...'
+  })
+  console.log('🌐 Step 2: Starting language detection...')
+  
+  const dominantLanguage = newspaperProcessor.detectDominantLanguage(rawText.text)
+  console.log(`🌐 Detected dominant language: ${dominantLanguage}`)
+  
+  // Update with detected language
+  await Newspaper.findByIdAndUpdate(newspaperId, {
+    dominantLanguage: dominantLanguage
+  })
+  
+  // Step 3: Article Extraction
+  await Newspaper.findByIdAndUpdate(newspaperId, {
+    processingStep: 'articles',
+    processingMessage: 'Extracting individual articles...'
+  })
+  console.log('📰 Step 3: Starting article extraction...')
+  
+  const articles = await newspaperProcessor.extractArticles(rawText.text, dominantLanguage)
+  console.log(`📄 Extracted ${articles.length} articles from newspaper`)
+  
+  // Update with article count
+  await Newspaper.findByIdAndUpdate(newspaperId, {
+    totalArticles: articles.length
+  })
+  
+  // Step 4: Sentiment Analysis
+  await Newspaper.findByIdAndUpdate(newspaperId, {
+    processingStep: 'sentiment',
+    processingMessage: `Analyzing sentiment for ${articles.length} articles...`
+  })
+  console.log('🧠 Step 4: Starting sentiment analysis...')
+  
+  const analyzedArticles = await newspaperProcessor.analyzeSentimentForArticles(articles)
+  
+  // Step 5: Final Analysis
+  await Newspaper.findByIdAndUpdate(newspaperId, {
+    processingStep: 'analysis',
+    processingMessage: 'Generating comprehensive analysis and insights...'
+  })
+  console.log('📊 Step 5: Starting final analysis...')
+  
+  const categorizedArticles = newspaperProcessor.categorizeArticlesBySentiment(analyzedArticles)
+  const analysis = newspaperProcessor.generateComprehensiveAnalysis(analyzedArticles, categorizedArticles, newspaperName)
+  
+  return {
+    articles: analyzedArticles,
+    categorizedArticles,
+    analysis,
+    totalArticles: analyzedArticles.length,
+    dominantLanguage,
+    processingStatus: 'completed'
+  }
+}
+
 // Background function to process newspaper analysis
 const processNewspaperAnalysis = async (newspaperId, filePath) => {
   console.log(`📰 Starting newspaper analysis for ${newspaperId}...`)
   
   try {
-    // Update status to processing
+    // Update status to processing with initial step
     await Newspaper.findByIdAndUpdate(newspaperId, {
-      processingStatus: 'processing'
+      processingStatus: 'processing',
+      processingStep: 'extraction',
+      processingMessage: 'Extracting text from PDF...'
     })
 
     const newspaper = await Newspaper.findById(newspaperId)
@@ -108,9 +176,9 @@ const processNewspaperAnalysis = async (newspaperId, filePath) => {
       return
     }
 
-    // Process newspaper using dedicated processor
+    // Process newspaper using dedicated processor with status updates
     console.log('📰 Processing newspaper with advanced extraction and analysis...')
-    const processingResult = await newspaperProcessor.processNewspaper(filePath, newspaper.newspaperName)
+    const processingResult = await processNewspaperWithStatusUpdates(newspaperId, filePath, newspaper.newspaperName)
     
     const {
       articles: analyzedArticles,

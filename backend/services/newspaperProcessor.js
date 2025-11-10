@@ -884,26 +884,188 @@ class NewspaperProcessor {
     return filtered
   }
 
-  // Sanitize content to avoid Azure OpenAI content policy violations
+  // Enhanced content sanitization to avoid Azure OpenAI content policy violations
   sanitizeContentForAI(text) {
     if (!text) return text
 
-    // Only sanitize if we're actually using external AI
-    // For local analysis, we can be less restrictive
     let sanitized = text
+
+    // Remove or replace content that commonly triggers Azure OpenAI content policies
+    const sensitivePatterns = [
+      // Violence and death - replace with neutral terms
+      { pattern: /\b(massacre|slaughter|bloodbath|carnage|butchery)\b/gi, replacement: 'serious incident' },
+      { pattern: /\b(brutal murder|savage attack|vicious assault|gruesome killing)\b/gi, replacement: 'serious incident' },
+      { pattern: /\b(killed|murdered|slain|assassinated)\b/gi, replacement: 'died' },
+      { pattern: /\b(victims were killed|patients were killed|people were killed)\b/gi, replacement: 'casualties occurred' },
+      { pattern: /\b(fire killed|blast killed|accident killed)\b/gi, replacement: 'fire caused casualties' },
+      
+      // Medical emergencies - use neutral language
+      { pattern: /\b(died in agony|suffered terribly|screamed in pain)\b/gi, replacement: 'experienced medical emergency' },
+      { pattern: /\b(burned alive|burned to death)\b/gi, replacement: 'casualties in fire incident' },
+      
+      // Graphic descriptions
+      { pattern: /\b(blood|gore|corpse|dead body|charred remains)\b/gi, replacement: 'incident scene' },
+      { pattern: /\b(horrific|gruesome|ghastly|macabre)\b/gi, replacement: 'serious' },
+      
+      // Sensitive topics that might trigger policies
+      { pattern: /\b(suicide bomber|terrorist attack|extremist)\b/gi, replacement: 'security incident' },
+      { pattern: /\b(hate crime|racial violence|communal violence)\b/gi, replacement: 'community incident' },
+      
+      // Remove excessive emotional language that might trigger sensitivity filters
+      { pattern: /\b(devastating|traumatic|horrifying|terrifying)\b/gi, replacement: 'significant' },
+      { pattern: /\b(nightmare|catastrophe|apocalyptic)\b/gi, replacement: 'challenging situation' }
+    ]
+
+    // Apply sanitization patterns
+    sensitivePatterns.forEach(({ pattern, replacement }) => {
+      sanitized = sanitized.replace(pattern, replacement)
+    })
+
+    // Remove excessive punctuation that might look like emotional outbursts
+    sanitized = sanitized.replace(/[!]{2,}/g, '!')
+    sanitized = sanitized.replace(/[?]{2,}/g, '?')
     
-    // Only remove the most extreme content that would definitely trigger policies
+    // Clean up any remaining problematic phrases
     sanitized = sanitized
-      .replace(/\b(massacre|slaughter|bloodbath)\b/gi, 'serious incident')
-      .replace(/\b(brutal murder|savage attack)\b/gi, 'serious incident')
-    
-    // Keep original length for better analysis
-    // Only truncate if extremely long
-    if (sanitized.length > 3000) {
-      sanitized = sanitized.substring(0, 3000) + '...'
+      .replace(/\b(oh my god|what the hell|damn it)\b/gi, '')
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim()
+
+    // Truncate if extremely long to avoid token limits
+    if (sanitized.length > 2500) {
+      // Find a good breaking point (end of sentence)
+      const truncateAt = sanitized.lastIndexOf('.', 2500)
+      if (truncateAt > 2000) {
+        sanitized = sanitized.substring(0, truncateAt + 1)
+      } else {
+        sanitized = sanitized.substring(0, 2500) + '...'
+      }
     }
 
     return sanitized
+  }
+
+  // Enhanced nonsensical content detection
+  isNonsensicalContent(headline, content) {
+    const combinedText = (headline + ' ' + content).toLowerCase()
+    
+    // Check for extremely short or fragmented headlines that don't make sense
+    const headlineWords = headline.trim().split(/\s+/)
+    
+    // Filter out single words or very short phrases that aren't proper headlines
+    if (headlineWords.length === 1 && headlineWords[0].length < 8) {
+      return true
+    }
+    
+    // Check for nonsensical patterns
+    const nonsensicalPatterns = [
+      // Single words that aren't proper headlines
+      /^(mr|mrs|ms|dr|prof|why|what|how|when|where|it|the|and|or|but|if|then|so|very|much|many|some|any|all|no|yes|ok|okay)\s*$/i,
+      
+      // Fragmented text patterns
+      /^[a-z]{1,3}\s*$/i, // Single short lowercase words
+      /^[A-Z]{1,3}\s*$/i, // Single short uppercase words (unless they're proper abbreviations)
+      /^\w{1,2}\s+\w{1,2}\s*$/i, // Two very short words
+      
+      // Layout artifacts and design elements
+      /^(page|pg|p)\s*\d+\s*$/i,
+      /^[0-9\s\-_=+*#@$%^&()[\]{}|\\:;"'<>,.?/~`!]+$/i, // Only symbols and numbers
+      /^\s*[A-Z]\s+[A-Z]\s+[A-Z]\s*$/i, // Spaced out single letters (design elements)
+      
+      // Common OCR errors and artifacts
+      /^[il1|]{2,}$/i, // Common OCR misreads
+      /^[oO0]{2,}$/i,
+      /^[.,;:!?]{2,}$/i, // Only punctuation
+      
+      // Incomplete sentences or fragments
+      /^(and|or|but|if|then|so|because|since|while|when|where|why|how|what|who|which|that)\s/i, // Starting with conjunctions/question words
+      /^(the|a|an)\s+$/i, // Just articles
+      
+      // Navigation and UI elements
+      /^(click here|read more|continue reading|next page|previous page|home|back|forward|menu|search|login|logout|subscribe|share|like|comment)\s*$/i,
+      
+      // Common newspaper layout elements that got extracted as headlines
+      /^(advertisement|classified|obituary|weather|horoscope|crossword|sudoku|comics|sports scores|stock prices)\s*$/i,
+      /^(विज्ञापन|वर्गीकृत|मौसम|राशिफल|खेल|શેર)\s*$/i, // Hindi/Gujarati equivalents
+      
+      // Bylines and credits that got extracted as headlines
+      /^(by|author|reporter|correspondent|staff|bureau|photo|image|getty|reuters|ap|pti)\s/i,
+      /^(द्वारा|संवाददाता|फोटो|छवि)\s/i, // Hindi equivalents
+      /^(દ્વારા|સંવાદદાતા|ફોટો|છબી)\s/i, // Gujarati equivalents
+      
+      // Technical artifacts
+      /^(http|www|\.com|\.in|\.org|email|@)\b/i,
+      /^[0-9a-f]{8,}$/i, // Hex codes or IDs
+      
+      // Repeated characters (OCR artifacts)
+      /(.)\1{4,}/, // Same character repeated 5+ times
+      
+      // Mixed language artifacts (random character combinations)
+      /^[a-zA-Z]{1,3}[0-9]{1,3}[a-zA-Z]{0,3}$/i, // Mixed letters and numbers in short strings
+    ]
+    
+    // Check headline against nonsensical patterns
+    for (const pattern of nonsensicalPatterns) {
+      if (pattern.test(headline.trim())) {
+        console.log(`🚫 Filtered nonsensical headline: "${headline}" (matched pattern: ${pattern})`)
+        return true
+      }
+    }
+    
+    // Check for headlines that are just random words without proper sentence structure
+    if (headlineWords.length >= 2) {
+      // Check if headline has proper sentence structure indicators
+      const hasProperStructure = /\b(is|are|was|were|has|have|had|will|would|could|should|may|might|can|do|does|did|said|says|told|announced|reported|declared|launched|opened|closed|started|ended|began|finished|completed|achieved|won|lost|died|born|married|divorced|arrested|charged|convicted|sentenced|released|elected|appointed|resigned|retired|fired|hired|promoted|demoted|increased|decreased|rose|fell|dropped|gained|lost|improved|worsened|expanded|contracted|grew|shrank|developed|created|destroyed|built|demolished|bought|sold|invested|donated|contributed|helped|supported|opposed|criticized|praised|blamed|thanked|congratulated|welcomed|rejected|accepted|approved|denied|confirmed|denied|revealed|disclosed|discovered|found|lost|searched|investigated|studied|researched|tested|tried|attempted|succeeded|failed|managed|struggled|fought|battled|competed|participated|attended|visited|traveled|moved|relocated|returned|arrived|departed|left|stayed|remained|continued|stopped|paused|resumed|started|began|initiated|launched|introduced|presented|showed|displayed|exhibited|demonstrated|proved|disproved|explained|described|discussed|mentioned|noted|observed|noticed|saw|heard|felt|thought|believed|knew|understood|learned|taught|trained|educated|informed|told|asked|answered|replied|responded|questioned|wondered|doubted|trusted|hoped|wished|wanted|needed|required|demanded|requested|suggested|recommended|advised|warned|threatened|promised|agreed|disagreed|argued|debated|negotiated|compromised|decided|chose|selected|picked|preferred|liked|loved|hated|disliked|enjoyed|suffered|experienced|faced|encountered|met|joined|left|quit|resigned|retired)\b/i
+      
+      if (!hasProperStructure && headlineWords.length < 6) {
+        // For short headlines without proper verbs, check if they at least make grammatical sense
+        const commonNouns = /\b(news|report|story|article|update|announcement|government|minister|police|court|hospital|school|university|company|business|market|economy|election|vote|candidate|party|leader|president|official|citizen|people|person|man|woman|child|student|teacher|doctor|patient|fire|accident|disaster|emergency|rescue|help|support|service|building|construction|development|investment|profit|revenue|growth|increase|decrease|rise|fall|change|improvement|progress|success|failure|problem|issue|challenge|solution|result|decision|plan|project|program|policy|law|rule|regulation|health|safety|security|education|employment|technology|science|research|study|analysis|investigation|evidence|data|information|system|process|method|approach|strategy|management|organization|administration|authority|office|department|ministry|agency|institution|foundation|society|community|culture|environment|climate|weather|energy|power|transport|communication|media|television|radio|newspaper|magazine|internet|computer|mobile|phone|social|international|national|local|regional|global|public|private|personal|professional|business|commercial|industrial|medical|legal|financial|political|economic|social|cultural|educational|scientific|technological|environmental)\b/i
+        
+        // Check if it's at least a reasonable noun phrase
+        const hasReasonableNouns = commonNouns.test(combinedText)
+        if (!hasReasonableNouns && headlineWords.length < 8) {
+          console.log(`🚫 Filtered headline without proper structure: "${headline}"`)
+          return true
+        }
+      }
+    }
+    
+    // Check content for nonsensical patterns
+    const contentWords = content.toLowerCase().split(/\s+/)
+    
+    // If content is too short and doesn't make sense
+    if (contentWords.length < 20) {
+      const hasProperSentences = /[.!?]/.test(content) && content.split(/[.!?]/).length > 1
+      if (!hasProperSentences) {
+        console.log(`🚫 Filtered short nonsensical content: "${content.substring(0, 50)}..."`)
+        return true
+      }
+    }
+    
+    // Check for excessive repetition (OCR artifacts)
+    const wordFrequency = {}
+    contentWords.forEach(word => {
+      if (word.length > 2) {
+        wordFrequency[word] = (wordFrequency[word] || 0) + 1
+      }
+    })
+    
+    const totalWords = contentWords.length
+    const repeatedWords = Object.values(wordFrequency).filter(count => count > totalWords * 0.1)
+    if (repeatedWords.length > 0) {
+      console.log(`🚫 Filtered content with excessive repetition: "${headline}"`)
+      return true
+    }
+    
+    // Check for random character sequences
+    const randomSequencePattern = /\b[a-zA-Z]{1,2}[0-9]{1,2}[a-zA-Z]{0,2}\b|\b[0-9]{1,2}[a-zA-Z]{1,2}[0-9]{0,2}\b/g
+    const randomMatches = combinedText.match(randomSequencePattern) || []
+    if (randomMatches.length > 3) {
+      console.log(`🚫 Filtered content with random sequences: "${headline}"`)
+      return true
+    }
+    
+    return false
   }
 
   // Calculate similarity between two article signatures
@@ -993,6 +1155,11 @@ class NewspaperProcessor {
       // Check headline quality - should be proper news headline
       const headlineWords = article.headline.split(/\s+/)
       if (headlineWords.length < 4 || headlineWords.length > 20) {
+        return false
+      }
+
+      // Enhanced nonsensical content detection
+      if (this.isNonsensicalContent(article.headline, article.content)) {
         return false
       }
 
@@ -1124,6 +1291,12 @@ class NewspaperProcessor {
           )
         ])
 
+        // Skip if the article was filtered out as nonsensical
+        if (result === null) {
+          console.log(`🚫 Skipped nonsensical article: "${article.headline.substring(0, 50)}..."`)
+          continue
+        }
+
         analyzed.push({
           ...article,
           id: `article_${i + 1}`,
@@ -1182,15 +1355,39 @@ class NewspaperProcessor {
       return counts
     }, {})
     
-    console.log(`✅ Sentiment analysis and headline generation completed for ${analyzed.length} articles`)
+    // Final filter to remove any remaining nonsensical articles
+    const finalFiltered = analyzed.filter(article => {
+      // Double-check for nonsensical content that might have slipped through
+      if (this.isNonsensicalContent(article.headline, article.content)) {
+        console.log(`🚫 Final filter removed nonsensical article: "${article.headline}"`)
+        return false
+      }
+      
+      // Filter out articles with extremely short or meaningless headlines
+      const headlineWords = article.headline.trim().split(/\s+/)
+      if (headlineWords.length < 3 || article.headline.length < 15) {
+        console.log(`🚫 Final filter removed short headline: "${article.headline}"`)
+        return false
+      }
+      
+      return true
+    })
+
+    console.log(`✅ Sentiment analysis and headline generation completed for ${finalFiltered.length} articles (${analyzed.length - finalFiltered.length} filtered out)`)
     console.log(`📊 Analysis methods used:`, methodCounts)
     
-    return analyzed
+    return finalFiltered
   }
 
   // Generate headline using AI and analyze sentiment
   async generateHeadlineAndAnalyzeSentiment(originalHeadline, content) {
     console.log('🤖 Generating headline and analyzing sentiment with AI...')
+
+    // Pre-filter nonsensical content before processing
+    if (this.isNonsensicalContent(originalHeadline, content)) {
+      console.log(`🚫 Skipping nonsensical article: "${originalHeadline.substring(0, 50)}..."`)
+      return null // Return null to indicate this article should be filtered out
+    }
 
     // Sanitize content to avoid content policy violations
     const sanitizedContent = this.sanitizeContentForAI(content)

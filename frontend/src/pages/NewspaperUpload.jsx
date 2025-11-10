@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { newspaperAPI } from '../services/api'
+import UploadModal from '../components/UploadModal'
 
 const NewspaperUpload = () => {
   const navigate = useNavigate()
@@ -94,7 +95,7 @@ const NewspaperUpload = () => {
       }
 
       const data = await newspaperAPI.uploadNewspaper(formData)
-      toast.success('Newspaper uploaded successfully! Analysis is starting...')
+      toast.success('Newspaper uploaded successfully! Redirecting to analysis page...')
       
       // Reset form
       setSelectedFile(null)
@@ -104,10 +105,8 @@ const NewspaperUpload = () => {
       // Refresh newspapers list
       fetchNewspapers()
       
-      // Navigate to the newspaper detail page
-      setTimeout(() => {
-        navigate(`/newspaper/${data._id}`)
-      }, 2000)
+      // Navigate immediately to show processing progress
+      navigate(`/newspaper/${data._id}`)
     } catch (error) {
       console.error('Upload error:', error)
       toast.error(error.message || 'Failed to upload newspaper')
@@ -290,7 +289,7 @@ const NewspaperUpload = () => {
               {uploading ? (
                 <>
                   <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                  Uploading & Analyzing...
+                  Uploading & Starting Analysis...
                 </>
               ) : (
                 <>
@@ -299,6 +298,23 @@ const NewspaperUpload = () => {
                 </>
               )}
             </button>
+
+            {/* Upload Progress Info */}
+            {uploading && (
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                <div className="flex items-center">
+                  <RefreshCw className="h-5 w-5 text-blue-500 animate-spin mr-3" />
+                  <div>
+                    <p className="font-medium text-blue-800 dark:text-blue-200">
+                      Uploading your newspaper...
+                    </p>
+                    <p className="text-sm text-blue-600 dark:text-blue-300">
+                      This may take a few moments depending on file size. Analysis will begin automatically after upload.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Info */}
             <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -408,6 +424,13 @@ const NewspaperUpload = () => {
           </div>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      <UploadModal 
+        isOpen={uploading}
+        fileName={selectedFile?.name}
+        fileSize={selectedFile?.size}
+      />
     </div>
   )
 }
