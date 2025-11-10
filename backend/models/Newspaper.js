@@ -102,12 +102,7 @@ const newspaperSchema = new mongoose.Schema(
       negative: { type: Number, default: 0 },
       neutral: { type: Number, default: 0 },
     },
-    sentimentScore: {
-      type: Number,
-      default: 0,
-      min: -100,
-      max: 100,
-    },
+
     languageBreakdown: {
       english: { type: Number, default: 0 },
       hindi: { type: Number, default: 0 },

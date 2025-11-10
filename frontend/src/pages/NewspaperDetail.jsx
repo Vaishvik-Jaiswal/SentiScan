@@ -321,9 +321,7 @@ const NewspaperDetail = () => {
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {newspaper.overallSentiment}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      Score: {newspaper.sentimentScore}/100
-                    </p>
+
                   </div>
                   <TrendingUp className="h-8 w-8 text-green-600" />
                 </div>

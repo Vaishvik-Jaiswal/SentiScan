@@ -197,10 +197,10 @@ const processNewspaperAnalysis = async (newspaperId, filePath) => {
     // Generate comprehensive report using the analysis data
     console.log('📝 Generating comprehensive report...')
     const compiledReport = {
-      summary: `Comprehensive analysis of "${newspaper.newspaperName}" containing ${totalArticles} articles with an overall ${overallMetrics.summary.overallSentiment.toLowerCase()} sentiment (Score: ${overallMetrics.summary.sentimentScore}/100). The analysis reveals a quality score of ${overallMetrics.summary.qualityScore}/100 with ${dominantLanguage} as the dominant language.`,
+      summary: `Comprehensive analysis of "${newspaper.newspaperName}" containing ${totalArticles} articles with an overall ${overallMetrics.summary.overallSentiment.toLowerCase()} sentiment. The analysis reveals a quality score of ${overallMetrics.summary.qualityScore}/100 with ${dominantLanguage} as the dominant language.`,
       keyFindings: [
         `${totalArticles} articles analyzed with ${overallMetrics.sentimentDistribution.counts.positive} positive, ${overallMetrics.sentimentDistribution.counts.negative} negative, and ${overallMetrics.sentimentDistribution.counts.neutral} neutral articles`,
-        `Overall sentiment: ${overallMetrics.summary.overallSentiment} (Score: ${overallMetrics.summary.sentimentScore}/100)`,
+        `Overall sentiment: ${overallMetrics.summary.overallSentiment}`,
         `Dominant language: ${dominantLanguage}`,
         `Quality score: ${overallMetrics.summary.qualityScore}/100`,
         ...overallMetrics.insights
@@ -244,7 +244,7 @@ const processNewspaperAnalysis = async (newspaperId, filePath) => {
       totalArticles: analyzedArticles.length,
       overallSentiment: overallMetrics.summary.overallSentiment,
       sentimentDistribution: overallMetrics.sentimentDistribution.counts,
-      sentimentScore: overallMetrics.summary.sentimentScore,
+
       languageBreakdown: overallMetrics.languageDistribution,
       dominantLanguage: dominantLanguage,
       analysisMetrics: {
@@ -757,7 +757,6 @@ const generateNewspaperChartImages = async (newspaper) => {
       data: {
         labels: [
           'Quality Score',
-          'Sentiment Score', 
           'Language Diversity',
           'Content Depth',
           'Analysis Confidence'
@@ -766,7 +765,6 @@ const generateNewspaperChartImages = async (newspaper) => {
           label: 'Newspaper Metrics',
           data: [
             qualityMetrics.qualityScore || 0,
-            newspaper.sentimentScore || 0,
             Math.min(Object.keys(languageData).length * 25, 100),
             Math.min((qualityMetrics.averageArticleLength || 0) / 5, 100),
             newspaper.articles ? (newspaper.articles.filter(a => a.sentimentConfidence === 'high').length / newspaper.articles.length) * 100 : 0
@@ -1178,10 +1176,7 @@ const generateNewspaperReportHTML = async (newspaper, chartImages = {}) => {
                     <div class="metric-value">${totalArticles}</div>
                     <div class="metric-label">Total Articles</div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-value">${newspaper.sentimentScore || 0}</div>
-                    <div class="metric-label">Sentiment Score</div>
-                </div>
+
                 <div class="metric-card">
                     <div class="metric-value">${newspaper.overallSentiment || 'N/A'}</div>
                     <div class="metric-label">Overall Sentiment</div>

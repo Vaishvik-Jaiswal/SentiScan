@@ -895,9 +895,19 @@ class NewspaperProcessor {
       // Violence and death - replace with neutral terms
       { pattern: /\b(massacre|slaughter|bloodbath|carnage|butchery)\b/gi, replacement: 'serious incident' },
       { pattern: /\b(brutal murder|savage attack|vicious assault|gruesome killing)\b/gi, replacement: 'serious incident' },
+      { pattern: /\b(savage response|brutal response|violent response)\b/gi, replacement: 'strong response' },
       { pattern: /\b(killed|murdered|slain|assassinated)\b/gi, replacement: 'died' },
       { pattern: /\b(victims were killed|patients were killed|people were killed)\b/gi, replacement: 'casualties occurred' },
       { pattern: /\b(fire killed|blast killed|accident killed)\b/gi, replacement: 'fire caused casualties' },
+      
+      // Military and conflict terms - neutralize
+      { pattern: /\b(bombing|bombardment|air strikes|missile attacks)\b/gi, replacement: 'military operations' },
+      { pattern: /\b(targeted|targeting)\b/gi, replacement: 'focused on' },
+      { pattern: /\b(destroy|destruction|devastate)\b/gi, replacement: 'impact' },
+      
+      // Political conflict terms
+      { pattern: /\b(hostages|kidnapped|abducted)\b/gi, replacement: 'detained individuals' },
+      { pattern: /\b(terrorist|extremist|militant)\b/gi, replacement: 'armed group member' },
       
       // Medical emergencies - use neutral language
       { pattern: /\b(died in agony|suffered terribly|screamed in pain)\b/gi, replacement: 'experienced medical emergency' },
@@ -908,7 +918,7 @@ class NewspaperProcessor {
       { pattern: /\b(horrific|gruesome|ghastly|macabre)\b/gi, replacement: 'serious' },
       
       // Sensitive topics that might trigger policies
-      { pattern: /\b(suicide bomber|terrorist attack|extremist)\b/gi, replacement: 'security incident' },
+      { pattern: /\b(suicide bomber|terrorist attack|extremist attack)\b/gi, replacement: 'security incident' },
       { pattern: /\b(hate crime|racial violence|communal violence)\b/gi, replacement: 'community incident' },
       
       // Remove excessive emotional language that might trigger sensitivity filters
@@ -1649,10 +1659,7 @@ class NewspaperProcessor {
 
     const overallSentiment = maxSentiment[1] > 0 ? maxSentiment[0] : 'neutral'
 
-    // Calculate sentiment score (-100 to +100)
-    const sentimentScore = Math.round(
-      ((sentimentCounts.positive - sentimentCounts.negative) / totalArticles) * 100
-    )
+
 
     // Language analysis
     const languageCounts = {}
@@ -1684,7 +1691,6 @@ class NewspaperProcessor {
         newspaperName,
         totalArticles,
         overallSentiment,
-        sentimentScore,
         qualityScore: Math.min(100, qualityScore),
         analysisDate: new Date()
       },

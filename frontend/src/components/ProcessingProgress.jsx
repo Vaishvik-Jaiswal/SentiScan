@@ -373,7 +373,7 @@ const ProcessingProgress = ({ newspaper, onRefresh, refreshing }) => {
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Elapsed time: {formatTime(elapsedTime)} • Estimated total: 15 - 20 minutes
           </p>
-        </div>
+        </div>  
         <button
           onClick={onRefresh}
           disabled={refreshing}

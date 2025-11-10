@@ -687,36 +687,48 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
       return { sentiment: 'Neutral', score: 0, confidence: 'low', reason: 'No text provided' }
     }
 
-    // For sensitive content, be more conservative and lean towards neutral
+    const normalizedText = text.toLowerCase()
+    
+    // Check for highly sensitive topics that should default to neutral
+    const sensitivePoliticalTopics = [
+      // Geopolitical conflicts
+      /\b(israel|palestine|hamas|gaza|west bank|netanyahu|trump|biden|putin|ukraine|russia|china|taiwan)\b/i,
+      /\b(war|conflict|military|bombing|attack|hostage|terrorist|violence|killing|death|casualties)\b/i,
+      /\b(ceasefire|peace deal|negotiation|diplomatic|sanctions|embargo|blockade)\b/i,
+      
+      // Religious/ethnic tensions
+      /\b(muslim|jewish|christian|hindu|buddhist|sikh|religious|ethnic|racial|communal)\b/i,
+      
+      // Political figures and parties
+      /\b(minister|president|prime minister|government|opposition|party|election|vote|campaign)\b/i,
+      
+      // Sensitive social issues
+      /\b(refugee|migration|border|asylum|deportation|discrimination|protest|riot|demonstration)\b/i
+    ]
+    
+    const isSensitiveTopic = sensitivePoliticalTopics.some(pattern => pattern.test(normalizedText))
+    
+    if (isSensitiveTopic) {
+      // For sensitive political/conflict content, always classify as neutral
+      // This prevents misclassification of complex geopolitical situations
+      return {
+        sentiment: 'Neutral',
+        score: 0,
+        confidence: 'high',
+        reason: 'Sensitive political/conflict content classified as neutral to avoid misinterpretation'
+      }
+    }
+
+    // For non-sensitive content that triggered policy violations, use regular analysis but be conservative
     const result = this.analyzeLocalSentiment(text)
     
-    // If the content triggered a policy violation, it's likely sensitive
-    // Be more conservative in classification
-    if (result.sentiment === 'Positive' && result.confidence === 'low') {
+    // Be more conservative in classification for any content that triggered AI blocks
+    if (result.confidence === 'low' || Math.abs(result.score) < 2.0) {
       return {
         sentiment: 'Neutral',
         score: 0,
         confidence: 'medium',
-        reason: 'Conservative classification due to sensitive content - avoiding positive misclassification'
-      }
-    }
-    
-    if (result.sentiment === 'Negative' && result.confidence === 'low') {
-      return {
-        sentiment: 'Neutral',
-        score: 0,
-        confidence: 'medium',
-        reason: 'Conservative classification due to sensitive content - avoiding negative misclassification'
-      }
-    }
-    
-    // Only allow strong sentiment classifications for sensitive content
-    if (result.confidence === 'low') {
-      return {
-        sentiment: 'Neutral',
-        score: 0,
-        confidence: 'medium',
-        reason: 'Conservative neutral classification for sensitive content'
+        reason: 'Conservative neutral classification for AI-blocked content to ensure accuracy'
       }
     }
     
