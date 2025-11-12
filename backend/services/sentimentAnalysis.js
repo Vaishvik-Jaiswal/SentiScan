@@ -3,14 +3,14 @@ import { OpenAI } from 'openai'
 class SentimentAnalysisService {
   constructor() {
     console.log('🚀 Starting SentimentAnalysisService...')
-    
+
     // Initialize sentiment word lists
     this.initializeSentimentLexicon()
-    
+
     // Initialize OpenAI client
     const initialized = this.initializeOpenAI()
     console.log(`🔌 OpenAI client initialization: ${initialized ? '✅ Success' : '❌ Failed'}`)
-    
+
     // If initialization failed, try again after a short delay
     if (!initialized) {
       console.log('🔄 Will retry OpenAI initialization in 2 seconds...')
@@ -206,13 +206,13 @@ class SentimentAnalysisService {
       console.log(`- Endpoint: ${process.env.AZURE_OPENAI_ENDPOINT}`)
       console.log(`- Deployment: ${process.env.AZURE_OPENAI_DEPLOYMENT}`)
       console.log(`- API Version: ${process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview'}`)
-      
+
       // Validate required fields
       if (!process.env.AZURE_OPENAI_DEPLOYMENT) {
         console.error('❌ AZURE_OPENAI_DEPLOYMENT is missing in environment variables')
         return false
       }
-      
+
       // Create direct configuration for Azure OpenAI
       const configuration = {
         apiKey: process.env.AZURE_OPENAI_API_KEY,
@@ -222,16 +222,16 @@ class SentimentAnalysisService {
           'api-key': process.env.AZURE_OPENAI_API_KEY,
         },
       }
-      
+
       console.log('📝 OpenAI Configuration:', {
         baseURL: configuration.baseURL,
         hasApiKey: !!configuration.apiKey,
         apiVersion: configuration.defaultQuery['api-version']
       })
-      
+
       // Create the OpenAI client
       this._openai = new OpenAI(configuration)
-      
+
       // Test the connection with a simple request
       console.log('🧪 Testing Azure OpenAI connection...')
       this._openai.chat.completions.create({
@@ -243,7 +243,7 @@ class SentimentAnalysisService {
       }).catch((error) => {
         console.error('❌ Azure OpenAI connection test failed:', error.message)
       })
-      
+
       console.log('✅ Azure OpenAI service initialized successfully')
       return true
     } catch (error) {
@@ -254,7 +254,235 @@ class SentimentAnalysisService {
     }
   }
 
-  // Enhanced local sentiment analysis with better classification
+  // Enhanced local sentiment analysis with detailed scoring and percentages
+  analyzeLocalSentimentEnhanced(text) {
+    if (!text || typeof text !== 'string') {
+      return {
+        sentiment: 'Neutral',
+        score: 0,
+        sentimentScore: 0,
+        percentages: { positive: 0, negative: 0, neutral: 100 },
+        confidence: 'low',
+        reason: 'No text provided'
+      }
+    }
+
+    const normalizedText = text.toLowerCase()
+    let positiveScore = 0
+    let negativeScore = 0
+    let neutralScore = 0
+    let positiveWords = []
+    let negativeWords = []
+    let neutralWords = []
+    let intensifierMultiplier = 1
+    let negationActive = false
+    let negationWindow = 0
+
+    // Split text into words and analyze
+    const words = normalizedText.split(/\s+/)
+
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i].replace(/[^\w\u0900-\u097F\u0A80-\u0AFF]/g, '')
+
+      // Decrease negation window
+      if (negationWindow > 0) {
+        negationWindow--
+        if (negationWindow === 0) {
+          negationActive = false
+        }
+      }
+
+      // Check for intensifiers
+      const isIntensifier = Object.values(this.intensifiers).some(lang =>
+        lang.some(intensifier => word.includes(intensifier.toLowerCase()) || intensifier.toLowerCase().includes(word))
+      )
+      if (isIntensifier) {
+        intensifierMultiplier = 2.0
+        continue
+      }
+
+      // Check for negations
+      const isNegation = Object.values(this.negations).some(lang =>
+        lang.some(negation => word.includes(negation.toLowerCase()) || negation.toLowerCase().includes(word))
+      )
+      if (isNegation) {
+        negationActive = true
+        negationWindow = 3
+        continue
+      }
+
+      // Check for positive words
+      const isPositive = Object.values(this.sentimentWords.positive).some(lang =>
+        lang.some(posWord => {
+          const pos = posWord.toLowerCase()
+          return word.includes(pos) || pos.includes(word) ||
+            this.calculateSimilarity(word, pos) > 0.8
+        })
+      )
+
+      if (isPositive) {
+        const baseScore = 1.0
+        const score = baseScore * intensifierMultiplier * (negationActive ? -1 : 1)
+        if (negationActive) {
+          negativeScore += Math.abs(score)
+          negativeWords.push(word)
+        } else {
+          positiveScore += score
+          positiveWords.push(word)
+        }
+        intensifierMultiplier = 1
+        continue
+      }
+
+      // Check for negative words
+      const isNegative = Object.values(this.sentimentWords.negative).some(lang =>
+        lang.some(negWord => {
+          const neg = negWord.toLowerCase()
+          return word.includes(neg) || neg.includes(word) ||
+            this.calculateSimilarity(word, neg) > 0.8
+        })
+      )
+
+      if (isNegative) {
+        const baseScore = 1.0
+        const score = baseScore * intensifierMultiplier * (negationActive ? -1 : 1)
+        if (negationActive) {
+          positiveScore += Math.abs(score)
+          positiveWords.push(word)
+        } else {
+          negativeScore += score
+          negativeWords.push(word)
+        }
+        intensifierMultiplier = 1
+        continue
+      }
+
+      // Count neutral words (words that aren't sentiment-bearing)
+      if (!isIntensifier && !isNegation && word.length > 2) {
+        neutralWords.push(word)
+        neutralScore += 0.1 // Small weight for neutral content
+      }
+
+      // Reset intensifier if no sentiment word found
+      if (!isIntensifier && !isNegation) {
+        intensifierMultiplier = 1
+      }
+    }
+
+    // Calculate enhanced metrics
+    const totalSentimentScore = positiveScore + negativeScore + neutralScore
+    const totalWords = positiveWords.length + negativeWords.length + neutralWords.length
+    const textLength = words.length
+
+    // Calculate percentages
+    let positivePercentage = 0
+    let negativePercentage = 0
+    let neutralPercentage = 100
+
+    if (totalSentimentScore > 0) {
+      positivePercentage = Math.round((positiveScore / totalSentimentScore) * 100)
+      negativePercentage = Math.round((negativeScore / totalSentimentScore) * 100)
+      neutralPercentage = Math.max(0, 100 - positivePercentage - negativePercentage)
+    }
+
+    // Calculate sentiment score from -10 to +10
+    const rawSentimentScore = positiveScore - negativeScore
+    const maxPossibleScore = Math.max(positiveScore + negativeScore, 1) // Avoid division by zero
+    let sentimentScore = (rawSentimentScore / maxPossibleScore) * 10
+
+    // Apply scaling based on sentiment strength
+    const sentimentStrength = (positiveWords.length + negativeWords.length) / Math.max(textLength, 1)
+    sentimentScore = sentimentScore * Math.min(sentimentStrength * 5, 1) // Scale by sentiment density
+
+    // Clamp to -10 to +10 range
+    sentimentScore = Math.max(-10, Math.min(10, sentimentScore))
+    sentimentScore = Math.round(sentimentScore * 100) / 100 // Round to 2 decimal places
+
+    // Determine primary sentiment
+    let sentiment = 'Neutral'
+    let confidence = 'low'
+    let reason = 'No clear sentiment indicators found'
+
+    const minThreshold = 0.5
+    const strongThreshold = 1.5
+
+    if (positiveWords.length > 0 && negativeWords.length > 0) {
+      const scoreDifference = Math.abs(positiveScore - negativeScore)
+      const wordDifference = Math.abs(positiveWords.length - negativeWords.length)
+
+      if (scoreDifference >= strongThreshold && wordDifference >= 2) {
+        if (positiveScore > negativeScore) {
+          sentiment = 'Positive'
+          confidence = 'medium'
+          reason = `Predominantly positive: ${positiveWords.length} positive vs ${negativeWords.length} negative words (score: ${sentimentScore})`
+        } else {
+          sentiment = 'Negative'
+          confidence = 'medium'
+          reason = `Predominantly negative: ${negativeWords.length} negative vs ${positiveWords.length} positive words (score: ${sentimentScore})`
+        }
+      } else {
+        sentiment = 'Neutral'
+        confidence = 'medium'
+        reason = `Mixed sentiment: ${positivePercentage}% positive, ${negativePercentage}% negative (score: ${sentimentScore})`
+      }
+    } else if (positiveWords.length > 0 && negativeWords.length === 0) {
+      if (positiveScore >= strongThreshold || positiveWords.length >= 2) {
+        sentiment = 'Positive'
+        confidence = this.calculateConfidence(positiveWords.length, totalWords, positiveScore)
+        reason = `Clear positive sentiment: ${positiveWords.slice(0, 3).join(', ')} (score: ${sentimentScore})`
+      } else if (positiveWords.length === 1 && positiveScore >= minThreshold) {
+        sentiment = 'Positive'
+        confidence = 'low'
+        reason = `Single positive indicator: ${positiveWords[0]} (score: ${sentimentScore})`
+      } else {
+        sentiment = 'Neutral'
+        confidence = 'low'
+        reason = `Weak positive signals (score: ${sentimentScore})`
+      }
+    } else if (negativeWords.length > 0 && positiveWords.length === 0) {
+      if (negativeScore >= strongThreshold || negativeWords.length >= 2) {
+        sentiment = 'Negative'
+        confidence = this.calculateConfidence(negativeWords.length, totalWords, negativeScore)
+        reason = `Clear negative sentiment: ${negativeWords.slice(0, 3).join(', ')} (score: ${sentimentScore})`
+      } else if (negativeWords.length === 1 && negativeScore >= minThreshold) {
+        sentiment = 'Negative'
+        confidence = 'low'
+        reason = `Single negative indicator: ${negativeWords[0]} (score: ${sentimentScore})`
+      } else {
+        sentiment = 'Neutral'
+        confidence = 'low'
+        reason = `Weak negative signals (score: ${sentimentScore})`
+      }
+    } else {
+      sentiment = 'Neutral'
+      confidence = 'high'
+      reason = `No sentiment indicators found (score: ${sentimentScore})`
+    }
+
+    return {
+      sentiment,
+      score: rawSentimentScore,
+      sentimentScore,
+      percentages: {
+        positive: positivePercentage,
+        negative: negativePercentage,
+        neutral: neutralPercentage
+      },
+      confidence,
+      reason,
+      details: {
+        positiveScore,
+        negativeScore,
+        neutralScore,
+        positiveWords: positiveWords.slice(0, 5),
+        negativeWords: negativeWords.slice(0, 5),
+        totalWords,
+        sentimentDensity: (positiveWords.length + negativeWords.length) / Math.max(textLength, 1)
+      }
+    }
+  }
+
+  // Enhanced local sentiment analysis with better classification (legacy method)
   analyzeLocalSentiment(text) {
     if (!text || typeof text !== 'string') {
       return { sentiment: 'Neutral', score: 0, confidence: 'low', reason: 'No text provided' }
@@ -271,10 +499,10 @@ class SentimentAnalysisService {
 
     // Split text into words and analyze
     const words = normalizedText.split(/\s+/)
-    
+
     for (let i = 0; i < words.length; i++) {
       const word = words[i].replace(/[^\w\u0900-\u097F\u0A80-\u0AFF]/g, '') // Keep English, Hindi, Gujarati chars
-      
+
       // Decrease negation window
       if (negationWindow > 0) {
         negationWindow--
@@ -282,9 +510,9 @@ class SentimentAnalysisService {
           negationActive = false
         }
       }
-      
+
       // Check for intensifiers
-      const isIntensifier = Object.values(this.intensifiers).some(lang => 
+      const isIntensifier = Object.values(this.intensifiers).some(lang =>
         lang.some(intensifier => word.includes(intensifier.toLowerCase()) || intensifier.toLowerCase().includes(word))
       )
       if (isIntensifier) {
@@ -293,7 +521,7 @@ class SentimentAnalysisService {
       }
 
       // Check for negations
-      const isNegation = Object.values(this.negations).some(lang => 
+      const isNegation = Object.values(this.negations).some(lang =>
         lang.some(negation => word.includes(negation.toLowerCase()) || negation.toLowerCase().includes(word))
       )
       if (isNegation) {
@@ -303,14 +531,14 @@ class SentimentAnalysisService {
       }
 
       // Check for positive words with partial matching
-      const isPositive = Object.values(this.sentimentWords.positive).some(lang => 
+      const isPositive = Object.values(this.sentimentWords.positive).some(lang =>
         lang.some(posWord => {
           const pos = posWord.toLowerCase()
-          return word.includes(pos) || pos.includes(word) || 
-                 this.calculateSimilarity(word, pos) > 0.8
+          return word.includes(pos) || pos.includes(word) ||
+            this.calculateSimilarity(word, pos) > 0.8
         })
       )
-      
+
       if (isPositive) {
         const baseScore = 1.0
         const score = baseScore * intensifierMultiplier * (negationActive ? -1 : 1)
@@ -326,14 +554,14 @@ class SentimentAnalysisService {
       }
 
       // Check for negative words with partial matching
-      const isNegative = Object.values(this.sentimentWords.negative).some(lang => 
+      const isNegative = Object.values(this.sentimentWords.negative).some(lang =>
         lang.some(negWord => {
           const neg = negWord.toLowerCase()
-          return word.includes(neg) || neg.includes(word) || 
-                 this.calculateSimilarity(word, neg) > 0.8
+          return word.includes(neg) || neg.includes(word) ||
+            this.calculateSimilarity(word, neg) > 0.8
         })
       )
-      
+
       if (isNegative) {
         const baseScore = 1.0
         const score = baseScore * intensifierMultiplier * (negationActive ? -1 : 1)
@@ -358,7 +586,7 @@ class SentimentAnalysisService {
     const totalScore = positiveScore - negativeScore
     const totalWords = positiveWords.length + negativeWords.length
     const textLength = words.length
-    
+
     let sentiment = 'Neutral'
     let confidence = 'low'
     let reason = 'No clear sentiment indicators found'
@@ -367,7 +595,7 @@ class SentimentAnalysisService {
     const sentimentDensity = totalWords / Math.max(textLength, 1)
     const minThreshold = 0.5 // Minimum score difference needed for classification
     const strongThreshold = 1.5 // Threshold for high confidence classification
-    
+
     console.log(`📊 Sentiment Analysis Debug:`, {
       text: text.substring(0, 100) + '...',
       positiveScore,
@@ -384,7 +612,7 @@ class SentimentAnalysisService {
       // Mixed sentiment - be very careful
       const scoreDifference = Math.abs(positiveScore - negativeScore)
       const wordDifference = Math.abs(positiveWords.length - negativeWords.length)
-      
+
       if (scoreDifference >= strongThreshold && wordDifference >= 2) {
         // Strong difference - safe to classify
         if (positiveScore > negativeScore) {
@@ -458,12 +686,12 @@ class SentimentAnalysisService {
   // Calculate string similarity for better word matching
   calculateSimilarity(str1, str2) {
     if (str1.length < 3 || str2.length < 3) return 0
-    
+
     const longer = str1.length > str2.length ? str1 : str2
     const shorter = str1.length > str2.length ? str2 : str1
-    
+
     if (longer.length === 0) return 1.0
-    
+
     const editDistance = this.levenshteinDistance(longer, shorter)
     return (longer.length - editDistance) / longer.length
   }
@@ -471,15 +699,15 @@ class SentimentAnalysisService {
   // Calculate Levenshtein distance
   levenshteinDistance(str1, str2) {
     const matrix = []
-    
+
     for (let i = 0; i <= str2.length; i++) {
       matrix[i] = [i]
     }
-    
+
     for (let j = 0; j <= str1.length; j++) {
       matrix[0][j] = j
     }
-    
+
     for (let i = 1; i <= str2.length; i++) {
       for (let j = 1; j <= str1.length; j++) {
         if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
@@ -493,7 +721,7 @@ class SentimentAnalysisService {
         }
       }
     }
-    
+
     return matrix[str2.length][str1.length]
   }
 
@@ -506,22 +734,26 @@ class SentimentAnalysisService {
   }
 
   async analyzeSentiment(heading, content) {
-    console.log('🧠 Starting AI-first sentiment analysis...')
+    console.log('🧠 Starting enhanced sentiment analysis with detailed scoring...')
 
     // If OpenAI client is not initialized, use local analysis as fallback
     if (!this._openai && !this.initializeOpenAI()) {
-      console.warn('⚠️ Azure OpenAI not configured, falling back to local sentiment analysis')
-      const headingLocal = this.analyzeLocalSentiment(heading)
-      const contentLocal = this.analyzeLocalSentiment(content)
-      
+      console.warn('⚠️ Azure OpenAI not configured, falling back to enhanced local sentiment analysis')
+      const headingLocal = this.analyzeLocalSentimentEnhanced(heading)
+      const contentLocal = this.analyzeLocalSentimentEnhanced(content)
+
       return {
         headingSentiment: headingLocal.sentiment,
         headingSentimentReason: headingLocal.reason,
+        headingSentimentScore: headingLocal.sentimentScore,
+        headingPercentages: headingLocal.percentages,
         contentSentiment: contentLocal.sentiment,
         contentSentimentReason: contentLocal.reason,
-        confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'high' : 
-                   headingLocal.confidence === 'medium' || contentLocal.confidence === 'medium' ? 'medium' : 'low',
-        method: 'local_fallback'
+        contentSentimentScore: contentLocal.sentimentScore,
+        contentPercentages: contentLocal.percentages,
+        confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'high' :
+          headingLocal.confidence === 'medium' || contentLocal.confidence === 'medium' ? 'medium' : 'low',
+        method: 'enhanced_local_fallback'
       }
     }
 
@@ -539,8 +771,20 @@ Respond in JSON format:
 {
   "headingSentiment": "Positive|Negative|Neutral",
   "headingSentimentReason": "Specific explanation with key words/phrases that influenced the decision",
+  "headingSentimentScore": -10 to +10 (where -10 is extremely negative, 0 is neutral, +10 is extremely positive),
+  "headingPercentages": {
+    "positive": 0-100,
+    "negative": 0-100,
+    "neutral": 0-100
+  },
   "contentSentiment": "Positive|Negative|Neutral", 
   "contentSentimentReason": "Detailed explanation with specific evidence from the text",
+  "contentSentimentScore": -10 to +10 (where -10 is extremely negative, 0 is neutral, +10 is extremely positive),
+  "contentPercentages": {
+    "positive": 0-100,
+    "negative": 0-100,
+    "neutral": 0-100
+  },
   "confidence": "high|medium|low"
 }
 
@@ -598,7 +842,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
 
       console.log('📤 Sending request to Azure OpenAI...')
       console.log('📝 Using model:', process.env.AZURE_OPENAI_DEPLOYMENT)
-      
+
       const response = await this._openai.chat.completions.create({
         model: process.env.AZURE_OPENAI_DEPLOYMENT,
         messages: [systemPrompt, userPrompt],
@@ -608,7 +852,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
       })
 
       console.log('📥 Received response from Azure OpenAI')
-      
+
       const result = response.choices[0]?.message?.content
       if (!result) {
         throw new Error('No response content from Azure OpenAI')
@@ -627,19 +871,23 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         throw new Error(`Failed to parse sentiment response: ${parseError.message}`)
       }
 
-      // Use AI predictions directly
+      // Use AI predictions with enhanced scoring
       return {
         headingSentiment: aiSentimentData.headingSentiment || 'Neutral',
         headingSentimentReason: aiSentimentData.headingSentimentReason || 'No specific reasoning provided',
+        headingSentimentScore: aiSentimentData.headingSentimentScore || 0,
+        headingPercentages: aiSentimentData.headingPercentages || { positive: 0, negative: 0, neutral: 100 },
         contentSentiment: aiSentimentData.contentSentiment || 'Neutral',
         contentSentimentReason: aiSentimentData.contentSentimentReason || 'No specific reasoning provided',
+        contentSentimentScore: aiSentimentData.contentSentimentScore || 0,
+        contentPercentages: aiSentimentData.contentPercentages || { positive: 0, negative: 0, neutral: 100 },
         confidence: aiSentimentData.confidence || 'medium',
         method: 'ai_primary'
       }
     } catch (error) {
       console.error('❌ Error analyzing sentiment with Azure OpenAI:', error)
       console.error('❌ Error details:', error.message)
-      
+
       // Check if it's a content policy violation
       const isContentPolicyViolation = error.message && (
         error.message.includes('content management policy') ||
@@ -647,35 +895,36 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         error.message.includes('content policy') ||
         error.message.includes('filtered due to the prompt')
       )
-      
+
       if (isContentPolicyViolation) {
         console.log('🔄 Content policy violation detected, using enhanced local analysis')
         // For content policy violations, use a more conservative local analysis
         const headingLocal = this.analyzeLocalSentimentConservative(heading)
         const contentLocal = this.analyzeLocalSentimentConservative(content)
-        
+
         return {
           headingSentiment: headingLocal.sentiment,
           headingSentimentReason: `Local analysis (AI blocked): ${headingLocal.reason}`,
           contentSentiment: contentLocal.sentiment,
-          contentSentimentReason: `Local analysis (AI blocked): ${contentLocal.reason}`,
+          // contentSentimentReason: `Local analysis (AI blocked): ${contentLocal.reason}`,
+          contentSentimentReason: `${contentLocal.reason}`,
           confidence: 'medium',
           method: 'local_content_policy_fallback'
         }
       }
-      
+
       // Fallback to local analysis if AI fails
       console.log('🔄 AI failed, falling back to local sentiment analysis')
       const headingLocal = this.analyzeLocalSentiment(heading)
       const contentLocal = this.analyzeLocalSentiment(content)
-      
+
       return {
         headingSentiment: headingLocal.sentiment,
         headingSentimentReason: `Local fallback: ${headingLocal.reason}`,
         contentSentiment: contentLocal.sentiment,
         contentSentimentReason: `Local fallback: ${contentLocal.reason}`,
-        confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'high' : 
-                   headingLocal.confidence === 'medium' || contentLocal.confidence === 'medium' ? 'medium' : 'low',
+        confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'high' :
+          headingLocal.confidence === 'medium' || contentLocal.confidence === 'medium' ? 'medium' : 'low',
         method: 'local_fallback'
       }
     }
@@ -688,26 +937,26 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
     }
 
     const normalizedText = text.toLowerCase()
-    
+
     // Check for highly sensitive topics that should default to neutral
     const sensitivePoliticalTopics = [
       // Geopolitical conflicts
       /\b(israel|palestine|hamas|gaza|west bank|netanyahu|trump|biden|putin|ukraine|russia|china|taiwan)\b/i,
       /\b(war|conflict|military|bombing|attack|hostage|terrorist|violence|killing|death|casualties)\b/i,
       /\b(ceasefire|peace deal|negotiation|diplomatic|sanctions|embargo|blockade)\b/i,
-      
+
       // Religious/ethnic tensions
       /\b(muslim|jewish|christian|hindu|buddhist|sikh|religious|ethnic|racial|communal)\b/i,
-      
+
       // Political figures and parties
       /\b(minister|president|prime minister|government|opposition|party|election|vote|campaign)\b/i,
-      
+
       // Sensitive social issues
       /\b(refugee|migration|border|asylum|deportation|discrimination|protest|riot|demonstration)\b/i
     ]
-    
+
     const isSensitiveTopic = sensitivePoliticalTopics.some(pattern => pattern.test(normalizedText))
-    
+
     if (isSensitiveTopic) {
       // For sensitive political/conflict content, always classify as neutral
       // This prevents misclassification of complex geopolitical situations
@@ -721,7 +970,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
 
     // For non-sensitive content that triggered policy violations, use regular analysis but be conservative
     const result = this.analyzeLocalSentiment(text)
-    
+
     // Be more conservative in classification for any content that triggered AI blocks
     if (result.confidence === 'low' || Math.abs(result.score) < 2.0) {
       return {
@@ -731,7 +980,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         reason: 'Conservative neutral classification for AI-blocked content to ensure accuracy'
       }
     }
-    
+
     return result
   }
 
@@ -748,15 +997,15 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         return articles.map(article => {
           const headingLocal = this.analyzeLocalSentiment(article.heading)
           const contentLocal = this.analyzeLocalSentiment(article.content)
-          
+
           return {
             articleId: article._id,
             headingSentiment: headingLocal.sentiment,
             headingSentimentReason: headingLocal.reason,
             contentSentiment: contentLocal.sentiment,
             contentSentimentReason: contentLocal.reason,
-            confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'high' : 
-                       headingLocal.confidence === 'medium' || contentLocal.confidence === 'medium' ? 'medium' : 'low',
+            confidence: headingLocal.confidence === 'high' || contentLocal.confidence === 'high' ? 'high' :
+              headingLocal.confidence === 'medium' || contentLocal.confidence === 'medium' ? 'medium' : 'low',
             method: 'local_batch_analysis'
           }
         })
@@ -765,7 +1014,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
 
     console.log(`🧠 Starting batch sentiment analysis for ${articles.length} articles...`)
     const results = []
-    
+
     for (const article of articles) {
       try {
         console.log(`📄 Analyzing article ${article._id}...`)
@@ -775,7 +1024,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
           ...sentiment,
         })
         console.log(`✅ Analysis complete for article ${article._id}:`, sentiment)
-        
+
         // Add delay to avoid rate limiting
         const delayMs = 1000
         console.log(`⏱️ Adding delay of ${delayMs}ms before next article...`)
@@ -793,7 +1042,7 @@ CONTENT: ${content.substring(0, 2000)}${content.length > 2000 ? '...' : ''}`
         })
       }
     }
-    
+
     console.log(`✅ Batch sentiment analysis completed for ${articles.length} articles`)
     return results
   }

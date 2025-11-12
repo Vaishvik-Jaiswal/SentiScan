@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { 
-  ArrowLeft, 
-  Newspaper, 
-  Calendar, 
-  FileText, 
+import {
+  ArrowLeft,
+  Newspaper,
+  Calendar,
+  FileText,
   BarChart3,
   TrendingUp,
   Globe,
@@ -52,19 +52,36 @@ const NewspaperDetail = () => {
     fetchNewspaper()
     // Auto-refresh if still processing - more frequent updates
     const interval = setInterval(() => {
-      if (newspaper?.processingStatus === 'processing') {
+      if (newspaper && (
+        !newspaper.isProcessed ||
+        newspaper.processingStatus === 'processing' ||
+        newspaper.processingStatus === 'pending' ||
+        newspaper.status === 'processing' ||
+        newspaper.processingStep ||
+        !newspaper.articles?.length
+      )) {
         fetchNewspaper(true)
       }
-    }, 5000) // Check every 5 seconds for better user experience
+    }, 3000) // Check every 3 seconds for better user experience
 
     return () => clearInterval(interval)
-  }, [id, newspaper?.processingStatus])
+  }, [id, newspaper?.processingStatus, newspaper?.isProcessed])
 
   const fetchNewspaper = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
-    
+
     try {
       const data = await newspaperAPI.getNewspaperById(id)
+      console.log('Fetched newspaper data:', {
+        id: data.id,
+        name: data.name,
+        isProcessed: data.isProcessed,
+        processingStatus: data.processingStatus,
+        status: data.status,
+        processingStep: data.processingStep,
+        articlesCount: data.articles?.length,
+        hasArticles: !!data.articles?.length
+      })
       setNewspaper(data)
     } catch (error) {
       console.error('Error fetching newspaper:', error)
@@ -243,13 +260,13 @@ const NewspaperDetail = () => {
               >
                 <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
-              {newspaper.processingStatus === 'completed' && (
+              {(newspaper.processingStatus === 'completed' || newspaper.isProcessed || newspaper.articles?.length > 0) && (
                 <button
                   onClick={async () => {
                     try {
                       console.log('📄 Downloading PDF report for newspaper:', newspaper._id)
                       const response = await newspaperAPI.generatePDFReport(newspaper._id)
-                      
+
                       // Create blob and download
                       const blob = new Blob([response], { type: 'application/pdf' })
                       const url = window.URL.createObjectURL(blob)
@@ -260,12 +277,12 @@ const NewspaperDetail = () => {
                       link.click()
                       document.body.removeChild(link)
                       window.URL.revokeObjectURL(url)
-                      
+
                       console.log('✅ PDF download initiated')
                     } catch (error) {
                       console.error('❌ Error downloading PDF:', error)
                       toast.error('Failed to download PDF report')
-                      
+
                       // Fallback: try direct URL approach
                       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
                       const token = localStorage.getItem('token')
@@ -284,485 +301,706 @@ const NewspaperDetail = () => {
         </div>
 
         {/* Enhanced Processing Status */}
-        {newspaper && newspaper.processingStatus !== 'completed' && (
-          <div className="mb-8">
-            <ProcessingProgress 
-              newspaper={newspaper} 
-              onRefresh={() => fetchNewspaper(true)}
-              refreshing={refreshing}
-            />
-          </div>
-        )}
+        {(() => {
+          const shouldShowProgress = (newspaper && (
+            !newspaper.isProcessed ||
+            newspaper.processingStatus === 'processing' ||
+            newspaper.processingStatus === 'pending' ||
+            newspaper.status === 'processing' ||
+            newspaper.processingStep ||
+            !newspaper.articles?.length
+          )) || (loading && id)
 
-        {newspaper.processingStatus === 'completed' && (
-          <>
-            {/* Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                      Total Articles
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {newspaper.totalArticles}
-                    </p>
-                  </div>
-                  <FileText className="h-8 w-8 text-blue-600" />
-                </div>
-              </div>
+          console.log('🔍 ProcessingProgress visibility check:', {
+            shouldShowProgress,
+            hasNewspaper: !!newspaper,
+            isProcessed: newspaper?.isProcessed,
+            processingStatus: newspaper?.processingStatus,
+            status: newspaper?.status,
+            processingStep: newspaper?.processingStep,
+            articlesLength: newspaper?.articles?.length,
+            loading,
+            id
+          })
 
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-green-600 dark:text-green-400 mb-1">
-                      Overall Sentiment
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {newspaper.overallSentiment}
-                    </p>
-
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-green-600" />
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-1">
-                      Dominant Language
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {getLanguageDisplay(newspaper.dominantLanguage)}
-                    </p>
-                  </div>
-                  <Languages className="h-8 w-8 text-purple-600" />
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mb-1">
-                      Quality Score
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {newspaper.analysisMetrics?.qualityScore || 0}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      /100
-                    </p>
-                  </div>
-                  <BarChart3 className="h-8 w-8 text-orange-600" />
-                </div>
-              </div>
+          return shouldShowProgress ? (
+            <div className="mb-8">
+              <ProcessingProgress
+                newspaper={newspaper || {
+                  id,
+                  name: 'Processing...',
+                  processingStatus: 'processing',
+                  processingStep: 'extraction',
+                  status: 'processing'
+                }}
+                onRefresh={() => fetchNewspaper(true)}
+                refreshing={refreshing}
+              />
             </div>
+          ) : null
+        })()}
 
-            {/* Enhanced Charts Section */}
-            <div className="space-y-8 mb-8">
-              {/* Primary Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Sentiment Distribution */}
+        {(() => {
+          // Show results if we have articles, regardless of processing status inconsistencies
+          const shouldShowResults = newspaper && newspaper.articles?.length > 0
+
+          console.log('🔍 Analysis results visibility check:', {
+            shouldShowResults,
+            hasNewspaper: !!newspaper,
+            hasArticles: !!newspaper?.articles?.length,
+            articlesCount: newspaper?.articles?.length,
+            isProcessed: newspaper?.isProcessed,
+            processingStatus: newspaper?.processingStatus,
+            status: newspaper?.status,
+            processingStep: newspaper?.processingStep,
+            firstArticle: newspaper?.articles?.[0] ? {
+              title: newspaper.articles[0].title,
+              sentiment: newspaper.articles[0].contentSentiment,
+              hasContent: !!newspaper.articles[0].content
+            } : null
+          })
+
+          return shouldShowResults
+        })() && (
+            <>
+              {/* Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
-                    Sentiment Distribution
-                  </h3>
-                  {sentimentChartData && (
-                    <div className="h-80">
-                      <Pie 
-                        data={sentimentChartData}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'bottom',
-                              labels: {
-                                padding: 20,
-                                usePointStyle: true,
-                              }
-                            },
-                            tooltip: {
-                              callbacks: {
-                                label: function(context) {
-                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                  const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                  return `${context.label}: ${context.parsed} (${percentage}%)`;
-                                }
-                              }
-                            }
-                          }
-                        }}
-                      />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                        Total Articles
+                      </p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                        {newspaper.totalArticles}
+                      </p>
                     </div>
-                  )}
-                  <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{sentimentData.positive}</div>
-                      <div className="text-sm text-green-700 dark:text-green-400">Positive</div>
-                    </div>
-                    <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      <div className="text-2xl font-bold text-red-600">{sentimentData.negative}</div>
-                      <div className="text-sm text-red-700 dark:text-red-400">Negative</div>
-                    </div>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-600">{sentimentData.neutral}</div>
-                      <div className="text-sm text-gray-700 dark:text-gray-400">Neutral</div>
-                    </div>
+                    <FileText className="h-8 w-8 text-blue-600" />
                   </div>
                 </div>
 
-                {/* Language Distribution */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <Globe className="h-5 w-5 mr-2 text-green-600" />
-                    Language Distribution
-                  </h3>
-                  {languageChartData && (
-                    <div className="h-80">
-                      <Bar 
-                        data={languageChartData}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              display: false
-                            },
-                            tooltip: {
-                              callbacks: {
-                                label: function(context) {
-                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                  const percentage = ((context.parsed.y / total) * 100).toFixed(1);
-                                  return `${context.parsed.y} articles (${percentage}%)`;
-                                }
-                              }
-                            }
-                          },
-                          scales: {
-                            y: {
-                              beginAtZero: true,
-                              ticks: {
-                                stepSize: 1
-                              }
-                            }
-                          }
-                        }}
-                      />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-green-600 dark:text-green-400 mb-1">
+                        Overall Sentiment
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {newspaper.overallSentiment}
+                      </p>
+
                     </div>
-                  )}
-                  <div className="mt-4 text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Dominant Language: <span className="font-semibold text-gray-900 dark:text-white">
+                    <TrendingUp className="h-8 w-8 text-green-600" />
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-1">
+                        Dominant Language
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
                         {getLanguageDisplay(newspaper.dominantLanguage)}
-                      </span>
+                      </p>
                     </div>
+                    <Languages className="h-8 w-8 text-purple-600" />
                   </div>
                 </div>
-              </div>
 
-              {/* Secondary Analytics */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Article Length Analysis */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <FileText className="h-5 w-5 mr-2 text-purple-600" />
-                    Article Lengths
-                  </h3>
-                  {newspaper.articles && (
-                    <div className="space-y-3">
-                      {(() => {
-                        const wordCounts = newspaper.articles.map(a => a.wordCount || 0);
-                        const avgLength = Math.round(wordCounts.reduce((a, b) => a + b, 0) / wordCounts.length);
-                        const shortArticles = wordCounts.filter(count => count <= 100).length;
-                        const mediumArticles = wordCounts.filter(count => count > 100 && count <= 300).length;
-                        const longArticles = wordCounts.filter(count => count > 300).length;
-                        
-                        return (
-                          <>
-                            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                              <div className="text-2xl font-bold text-purple-600">{avgLength}</div>
-                              <div className="text-sm text-purple-700 dark:text-purple-400">Avg Words</div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Short (≤100)</span>
-                                <span className="font-semibold">{shortArticles}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Medium (101-300)</span>
-                                <span className="font-semibold">{mediumArticles}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Long (300+)</span>
-                                <span className="font-semibold">{longArticles}</span>
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Confidence Analysis */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <BarChart3 className="h-5 w-5 mr-2 text-orange-600" />
-                    Analysis Confidence
-                  </h3>
-                  {newspaper.articles && (
-                    <div className="space-y-3">
-                      {(() => {
-                        const highConf = newspaper.articles.filter(a => a.sentimentConfidence === 'high').length;
-                        const mediumConf = newspaper.articles.filter(a => a.sentimentConfidence === 'medium').length;
-                        const lowConf = newspaper.articles.filter(a => a.sentimentConfidence === 'low').length;
-                        const total = newspaper.articles.length;
-                        
-                        return (
-                          <>
-                            <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                              <div className="text-2xl font-bold text-orange-600">
-                                {total > 0 ? Math.round((highConf / total) * 100) : 0}%
-                              </div>
-                              <div className="text-sm text-orange-700 dark:text-orange-400">High Confidence</div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">High</span>
-                                <span className="font-semibold text-green-600">{highConf}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Medium</span>
-                                <span className="font-semibold text-yellow-600">{mediumConf}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Low</span>
-                                <span className="font-semibold text-red-600">{lowConf}</span>
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Quality Metrics */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
-                    Quality Metrics
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mb-1">
+                        Quality Score
+                      </p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">
                         {newspaper.analysisMetrics?.qualityScore || 0}
-                      </div>
-                      <div className="text-sm text-blue-700 dark:text-blue-400">Quality Score</div>
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        /100
+                      </p>
                     </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Total Words</span>
-                        <span className="font-semibold">
-                          {newspaper.analysisMetrics?.totalWordCount?.toLocaleString() || 0}
-                        </span>
+                    <BarChart3 className="h-8 w-8 text-orange-600" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Enhanced Charts Section */}
+              <div className="space-y-8 mb-8">
+                {/* Primary Charts Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Sentiment Distribution */}
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
+                      Sentiment Distribution
+                    </h3>
+                    {sentimentChartData && (
+                      <div className="h-80">
+                        <Pie
+                          data={sentimentChartData}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: 'bottom',
+                                labels: {
+                                  padding: 20,
+                                  usePointStyle: true,
+                                }
+                              },
+                              tooltip: {
+                                callbacks: {
+                                  label: function (context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                  }
+                                }
+                              }
+                            }
+                          }}
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Avg Length</span>
-                        <span className="font-semibold">
-                          {newspaper.analysisMetrics?.averageArticleLength || 0} words
-                        </span>
+                    )}
+                    <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{sentimentData.positive}</div>
+                        <div className="text-sm text-green-700 dark:text-green-400">Positive</div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Languages</span>
-                        <span className="font-semibold">
-                          {Object.keys(newspaper.languageBreakdown || {}).length}
+                      <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">{sentimentData.negative}</div>
+                        <div className="text-sm text-red-700 dark:text-red-400">Negative</div>
+                      </div>
+                      <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-600">{sentimentData.neutral}</div>
+                        <div className="text-sm text-gray-700 dark:text-gray-400">Neutral</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Language Distribution */}
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <Globe className="h-5 w-5 mr-2 text-green-600" />
+                      Language Distribution
+                    </h3>
+                    {languageChartData && (
+                      <div className="h-80">
+                        <Bar
+                          data={languageChartData}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: false
+                              },
+                              tooltip: {
+                                callbacks: {
+                                  label: function (context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed.y / total) * 100).toFixed(1);
+                                    return `${context.parsed.y} articles (${percentage}%)`;
+                                  }
+                                }
+                              }
+                            },
+                            scales: {
+                              y: {
+                                beginAtZero: true,
+                                ticks: {
+                                  stepSize: 1
+                                }
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className="mt-4 text-center">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Dominant Language: <span className="font-semibold text-gray-900 dark:text-white">
+                          {getLanguageDisplay(newspaper.dominantLanguage)}
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Analysis Summary */}
-            {newspaper.compiledReport && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8 mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                  Analysis Summary
-                </h3>
-                <div className="prose dark:prose-invert max-w-none">
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {newspaper.compiledReport.summary}
-                  </p>
-                </div>
+                {/* Secondary Analytics */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Article Length Analysis */}
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-purple-600" />
+                      Article Lengths
+                    </h3>
+                    {newspaper.articles && (
+                      <div className="space-y-3">
+                        {(() => {
+                          const wordCounts = newspaper.articles.map(a => a.wordCount || 0);
+                          const avgLength = Math.round(wordCounts.reduce((a, b) => a + b, 0) / wordCounts.length);
+                          const shortArticles = wordCounts.filter(count => count <= 100).length;
+                          const mediumArticles = wordCounts.filter(count => count > 100 && count <= 300).length;
+                          const longArticles = wordCounts.filter(count => count > 300).length;
 
-                {newspaper.compiledReport.keyFindings && (
-                  <div className="mt-6">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                      Key Findings
-                    </h4>
-                    <ul className="space-y-2">
-                      {newspaper.compiledReport.keyFindings.map((finding, index) => (
-                        <li key={index} className="flex items-start">
-                          <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700 dark:text-gray-300">{finding}</span>
-                        </li>
-                      ))}
-                    </ul>
+                          return (
+                            <>
+                              <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                <div className="text-2xl font-bold text-purple-600">{avgLength}</div>
+                                <div className="text-sm text-purple-700 dark:text-purple-400">Avg Words</div>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">Short (≤100)</span>
+                                  <span className="font-semibold">{shortArticles}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">Medium (101-300)</span>
+                                  <span className="font-semibold">{mediumArticles}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">Long (300+)</span>
+                                  <span className="font-semibold">{longArticles}</span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Categorized Articles by Sentiment */}
-            <div className="space-y-8">
-              {/* Positive Articles */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                    <div className="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
-                    Positive Articles
-                  </h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 bg-green-100 dark:bg-green-900/20 px-3 py-1 rounded-full">
-                    {newspaper.articles?.filter(article => article.contentSentiment === 'Positive').length || 0} articles
-                  </span>
-                </div>
+                  {/* Confidence Analysis */}
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <BarChart3 className="h-5 w-5 mr-2 text-orange-600" />
+                      Analysis Confidence
+                    </h3>
+                    {newspaper.articles && (
+                      <div className="space-y-3">
+                        {(() => {
+                          const highConf = newspaper.articles.filter(a => a.sentimentConfidence === 'high').length;
+                          const mediumConf = newspaper.articles.filter(a => a.sentimentConfidence === 'medium').length;
+                          const lowConf = newspaper.articles.filter(a => a.sentimentConfidence === 'low').length;
+                          const total = newspaper.articles.length;
 
-                <div className="space-y-4 max-h-80 overflow-y-auto">
-                  {newspaper.articles?.filter(article => article.contentSentiment === 'Positive').map((article, index) => (
-                    <div
-                      key={index}
-                      className="border border-green-200 dark:border-green-700/50 rounded-lg p-4 bg-green-50/50 dark:bg-green-900/10 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-                            {article.title}
-                          </h4>
-                          {article.contentSentimentReason && (
-                            <div className="bg-green-50 dark:bg-green-900/10 border-l-4 border-green-400 p-3 rounded">
-                              <p className="text-sm text-gray-700 dark:text-gray-300">
-                                <strong className="text-green-700 dark:text-green-400">Why Positive:</strong> {article.contentSentimentReason}
-                              </p>
-                            </div>
-                          )}
+                          return (
+                            <>
+                              <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                                <div className="text-2xl font-bold text-orange-600">
+                                  {total > 0 ? Math.round((highConf / total) * 100) : 0}%
+                                </div>
+                                <div className="text-sm text-orange-700 dark:text-orange-400">High Confidence</div>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">High</span>
+                                  <span className="font-semibold text-green-600">{highConf}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">Medium</span>
+                                  <span className="font-semibold text-yellow-600">{mediumConf}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">Low</span>
+                                  <span className="font-semibold text-red-600">{lowConf}</span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quality Metrics */}
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
+                      Quality Metrics
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {newspaper.analysisMetrics?.qualityScore || 0}
                         </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                            {article.sentimentConfidence} confidence
+                        <div className="text-sm text-blue-700 dark:text-blue-400">Quality Score</div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Total Words</span>
+                          <span className="font-semibold">
+                            {newspaper.analysisMetrics?.totalWordCount?.toLocaleString() || 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Avg Length</span>
+                          <span className="font-semibold">
+                            {newspaper.analysisMetrics?.averageArticleLength || 0} words
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Languages</span>
+                          <span className="font-semibold">
+                            {Object.keys(newspaper.languageBreakdown || {}).length}
                           </span>
                         </div>
                       </div>
                     </div>
-                  ))}
-                  {newspaper.articles?.filter(article => article.contentSentiment === 'Positive').length === 0 && (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      No positive articles found in this newspaper.
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
-              {/* Negative Articles */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                    <div className="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
-                    Negative Articles
+              {/* Analysis Summary */}
+              {newspaper.compiledReport && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8 mb-8">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                    Analysis Summary
                   </h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 bg-red-100 dark:bg-red-900/20 px-3 py-1 rounded-full">
-                    {newspaper.articles?.filter(article => article.contentSentiment === 'Negative').length || 0} articles
-                  </span>
-                </div>
+                  <div className="prose dark:prose-invert max-w-none">
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {newspaper.compiledReport.summary}
+                    </p>
+                  </div>
 
-                <div className="space-y-4 max-h-80 overflow-y-auto">
-                  {newspaper.articles?.filter(article => article.contentSentiment === 'Negative').map((article, index) => (
-                    <div
-                      key={index}
-                      className="border border-red-200 dark:border-red-700/50 rounded-lg p-4 bg-red-50/50 dark:bg-red-900/10 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                  {newspaper.compiledReport.keyFindings && (
+                    <div className="mt-6">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        Key Findings
+                      </h4>
+                      <ul className="space-y-2">
+                        {newspaper.compiledReport.keyFindings.map((finding, index) => (
+                          <li key={index} className="flex items-start">
+                            <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700 dark:text-gray-300">{finding}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Categorized Articles by Sentiment */}
+              <div className="space-y-8">
+                {/* Positive Articles */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                      <div className="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                      Positive Articles
+                    </h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 bg-green-100 dark:bg-green-900/20 px-3 py-1 rounded-full">
+                      {newspaper.articles?.filter(article => article.contentSentiment === 'Positive').length || 0} articles
+                    </span>
+                  </div>
+
+                  <div className="space-y-6 max-h-96 overflow-y-auto pr-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#10b981 #f0fdf4' }}>
+                    {newspaper.articles?.filter(article => article.contentSentiment === 'Positive').map((article, index) => (
+                      <div
+                        key={index}
+                        className="bg-white dark:bg-gray-800 border border-green-200 dark:border-green-700/50 rounded-xl p-6 hover:shadow-lg transition-all duration-200"
+                      >
+                        {/* Header with title and score */}
+                        <div className="flex items-start justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white leading-tight flex-1 mr-4">
                             {article.title}
                           </h4>
-                          {article.contentSentimentReason && (
-                            <div className="bg-red-50 dark:bg-red-900/10 border-l-4 border-red-400 p-3 rounded">
-                              <p className="text-sm text-gray-700 dark:text-gray-300">
-                                <strong className="text-red-700 dark:text-red-400">Why Negative:</strong> {article.contentSentimentReason}
-                              </p>
+                          <div className="flex items-center space-x-3 flex-shrink-0">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-green-600">
+                                {article.contentSentimentScore !== undefined ? article.contentSentimentScore : 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500 font-medium">Score</div>
+                            </div>
+                            <div className="flex flex-col items-end space-y-1">
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                {article.sentimentConfidence}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {article.wordCount} words
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Compact sentiment breakdown */}
+                        <div className="mb-4">
+                          {article.contentPercentages && (
+                            <div className="flex items-center space-x-4 mb-2">
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span className="font-medium text-green-700 dark:text-green-400">
+                                  {article.contentPercentages.positive}%
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span className="font-medium text-red-700 dark:text-red-400">
+                                  {article.contentPercentages.negative}%
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">
+                                  {article.contentPercentages.neutral}%
+                                </span>
+                              </div>
                             </div>
                           )}
+
+                          {/* Compact progress bar */}
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div className="flex h-2 rounded-full overflow-hidden">
+                              <div
+                                className="bg-green-500"
+                                style={{ width: `${article.contentPercentages?.positive || 0}%` }}
+                              ></div>
+                              <div
+                                className="bg-red-500"
+                                style={{ width: `${article.contentPercentages?.negative || 0}%` }}
+                              ></div>
+                              <div
+                                className="bg-gray-400"
+                                style={{ width: `${article.contentPercentages?.neutral || 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                            {article.sentimentConfidence} confidence
-                          </span>
-                        </div>
+
+                        {/* Analysis text - larger and more prominent */}
+                        {article.contentSentimentReason && (
+                          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border-l-4 border-green-400">
+                            <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+                              <span className="font-semibold text-green-700 dark:text-green-400">Analysis: </span>
+                              {article.contentSentimentReason}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                  {newspaper.articles?.filter(article => article.contentSentiment === 'Negative').length === 0 && (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      No negative articles found in this newspaper.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Neutral Articles */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                    <div className="w-4 h-4 bg-gray-500 rounded-full mr-3"></div>
-                    Neutral Articles
-                  </h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-                    {newspaper.articles?.filter(article => article.contentSentiment === 'Neutral').length || 0} articles
-                  </span>
+                    ))}
+                    {newspaper.articles?.filter(article => article.contentSentiment === 'Positive').length === 0 && (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No positive articles found in this newspaper.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-4 max-h-80 overflow-y-auto">
-                  {newspaper.articles?.filter(article => article.contentSentiment === 'Neutral').map((article, index) => (
-                    <div
-                      key={index}
-                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50/50 dark:bg-gray-700/20 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                {/* Negative Articles */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                      <div className="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+                      Negative Articles
+                    </h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 bg-red-100 dark:bg-red-900/20 px-3 py-1 rounded-full">
+                      {newspaper.articles?.filter(article => article.contentSentiment === 'Negative').length || 0} articles
+                    </span>
+                  </div>
+
+                  <div className="space-y-6 max-h-96 overflow-y-auto pr-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#ef4444 #fef2f2' }}>
+                    {newspaper.articles?.filter(article => article.contentSentiment === 'Negative').map((article, index) => (
+                      <div
+                        key={index}
+                        className="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700/50 rounded-xl p-6 hover:shadow-lg transition-all duration-200"
+                      >
+                        {/* Header with title and score */}
+                        <div className="flex items-start justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white leading-tight flex-1 mr-4">
                             {article.title}
                           </h4>
-                          {article.contentSentimentReason && (
-                            <div className="bg-gray-50 dark:bg-gray-800/50 border-l-4 border-gray-400 p-3 rounded">
-                              <p className="text-sm text-gray-700 dark:text-gray-300">
-                                <strong className="text-gray-700 dark:text-gray-400">Why Neutral:</strong> {article.contentSentimentReason}
-                              </p>
+                          <div className="flex items-center space-x-3 flex-shrink-0">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-red-600">
+                                {article.contentSentimentScore !== undefined ? article.contentSentimentScore : 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500 font-medium">Score</div>
+                            </div>
+                            <div className="flex flex-col items-end space-y-1">
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                {article.sentimentConfidence}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {article.wordCount} words
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Compact sentiment breakdown */}
+                        <div className="mb-4">
+                          {article.contentPercentages && (
+                            <div className="flex items-center space-x-4 mb-2">
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span className="font-medium text-green-700 dark:text-green-400">
+                                  {article.contentPercentages.positive}%
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span className="font-medium text-red-700 dark:text-red-400">
+                                  {article.contentPercentages.negative}%
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">
+                                  {article.contentPercentages.neutral}%
+                                </span>
+                              </div>
                             </div>
                           )}
+
+                          {/* Compact progress bar */}
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div className="flex h-2 rounded-full overflow-hidden">
+                              <div
+                                className="bg-green-500"
+                                style={{ width: `${article.contentPercentages?.positive || 0}%` }}
+                              ></div>
+                              <div
+                                className="bg-red-500"
+                                style={{ width: `${article.contentPercentages?.negative || 0}%` }}
+                              ></div>
+                              <div
+                                className="bg-gray-400"
+                                style={{ width: `${article.contentPercentages?.neutral || 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                            {article.sentimentConfidence} confidence
-                          </span>
-                        </div>
+
+                        {/* Analysis text - larger and more prominent */}
+                        {article.contentSentimentReason && (
+                          <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border-l-4 border-red-400">
+                            <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+                              <span className="font-semibold text-red-700 dark:text-red-400">Analysis: </span>
+                              {article.contentSentimentReason}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                  {newspaper.articles?.filter(article => article.contentSentiment === 'Neutral').length === 0 && (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      No neutral articles found in this newspaper.
-                    </div>
-                  )}
+                    ))}
+                    {newspaper.articles?.filter(article => article.contentSentiment === 'Negative').length === 0 && (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No negative articles found in this newspaper.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Neutral Articles */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                      <div className="w-4 h-4 bg-gray-500 rounded-full mr-3"></div>
+                      Neutral Articles
+                    </h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                      {newspaper.articles?.filter(article => article.contentSentiment === 'Neutral').length || 0} articles
+                    </span>
+                  </div>
+
+                  <div className="space-y-6 max-h-96 overflow-y-auto pr-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6b7280 #f9fafb' }}>
+                    {newspaper.articles?.filter(article => article.contentSentiment === 'Neutral').map((article, index) => (
+                      <div
+                        key={index}
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-6 hover:shadow-lg transition-all duration-200"
+                      >
+                        {/* Header with title and score */}
+                        <div className="flex items-start justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white leading-tight flex-1 mr-4">
+                            {article.title}
+                          </h4>
+                          <div className="flex items-center space-x-3 flex-shrink-0">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-gray-600">
+                                {article.contentSentimentScore !== undefined ? article.contentSentimentScore : 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500 font-medium">Score</div>
+                            </div>
+                            <div className="flex flex-col items-end space-y-1">
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                {article.sentimentConfidence}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {article.wordCount} words
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Compact sentiment breakdown */}
+                        <div className="mb-4">
+                          {article.contentPercentages && (
+                            <div className="flex items-center space-x-4 mb-2">
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span className="font-medium text-green-700 dark:text-green-400">
+                                  {article.contentPercentages.positive}%
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span className="font-medium text-red-700 dark:text-red-400">
+                                  {article.contentPercentages.negative}%
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm">
+                                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <span className="font-medium text-gray-600 dark:text-gray-400">
+                                  {article.contentPercentages.neutral}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Compact progress bar */}
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div className="flex h-2 rounded-full overflow-hidden">
+                              <div
+                                className="bg-green-500"
+                                style={{ width: `${article.contentPercentages?.positive || 0}%` }}
+                              ></div>
+                              <div
+                                className="bg-red-500"
+                                style={{ width: `${article.contentPercentages?.negative || 0}%` }}
+                              ></div>
+                              <div
+                                className="bg-gray-400"
+                                style={{ width: `${article.contentPercentages?.neutral || 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Analysis text - larger and more prominent */}
+                        {article.contentSentimentReason && (
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border-l-4 border-gray-400">
+                            <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+                              <span className="font-semibold text-gray-700 dark:text-gray-400">Analysis: </span>
+                              {article.contentSentimentReason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {newspaper.articles?.filter(article => article.contentSentiment === 'Neutral').length === 0 && (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No neutral articles found in this newspaper.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
         {/* Metadata */}
         <div className="mt-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">

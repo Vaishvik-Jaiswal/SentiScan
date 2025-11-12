@@ -1314,8 +1314,12 @@ class NewspaperProcessor {
           headline: result.generatedHeadline, // Use AI-generated headline
           headingSentiment: result.headingSentiment,
           headingSentimentReason: result.headingSentimentReason,
+          headingSentimentScore: result.headingSentimentScore || 0,
+          headingPercentages: result.headingPercentages || { positive: 0, negative: 0, neutral: 100 },
           contentSentiment: result.contentSentiment,
           contentSentimentReason: result.contentSentimentReason,
+          contentSentimentScore: result.contentSentimentScore || 0,
+          contentPercentages: result.contentPercentages || { positive: 0, negative: 0, neutral: 100 },
           overallSentiment: result.contentSentiment, // Use content sentiment as primary
           sentimentConfidence: result.confidence,
           wordCount: article.content.split(/\s+/).length,
@@ -1344,8 +1348,12 @@ class NewspaperProcessor {
           headline: this.generateFallbackHeadline(article.content), // Generate simple fallback
           headingSentiment: localSentiment.headingSentiment,
           headingSentimentReason: localSentiment.headingSentimentReason,
+          headingSentimentScore: localSentiment.headingSentimentScore || 0,
+          headingPercentages: localSentiment.headingPercentages || { positive: 0, negative: 0, neutral: 100 },
           contentSentiment: localSentiment.contentSentiment,
           contentSentimentReason: localSentiment.contentSentimentReason,
+          contentSentimentScore: localSentiment.contentSentimentScore || 0,
+          contentPercentages: localSentiment.contentPercentages || { positive: 0, negative: 0, neutral: 100 },
           overallSentiment: localSentiment.contentSentiment,
           sentimentConfidence: 'medium', // Local analysis is better than 'low'
           wordCount: article.content.split(/\s+/).length,
@@ -1420,8 +1428,12 @@ class NewspaperProcessor {
         generatedHeadline,
         headingSentiment: sentiment.headingSentiment,
         headingSentimentReason: sentiment.headingSentimentReason,
+        headingSentimentScore: sentiment.headingSentimentScore || 0,
+        headingPercentages: sentiment.headingPercentages || { positive: 0, negative: 0, neutral: 100 },
         contentSentiment: sentiment.contentSentiment,
         contentSentimentReason: sentiment.contentSentimentReason,
+        contentSentimentScore: sentiment.contentSentimentScore || 0,
+        contentPercentages: sentiment.contentPercentages || { positive: 0, negative: 0, neutral: 100 },
         confidence: sentiment.confidence
       }
 
@@ -1435,8 +1447,12 @@ class NewspaperProcessor {
         generatedHeadline: this.generateFallbackHeadline(sanitizedContent),
         headingSentiment: localSentiment.headingSentiment,
         headingSentimentReason: localSentiment.headingSentimentReason,
+        headingSentimentScore: localSentiment.headingSentimentScore || 0,
+        headingPercentages: localSentiment.headingPercentages || { positive: 0, negative: 0, neutral: 100 },
         contentSentiment: localSentiment.contentSentiment,
         contentSentimentReason: localSentiment.contentSentimentReason,
+        contentSentimentScore: localSentiment.contentSentimentScore || 0,
+        contentPercentages: localSentiment.contentPercentages || { positive: 0, negative: 0, neutral: 100 },
         confidence: 'medium' // Better than 'low' since we're doing actual analysis
       }
     }
@@ -1524,45 +1540,65 @@ class NewspaperProcessor {
       neutralCount += matches
     })
     
-    // Determine sentiment based on word counts
+    // Determine sentiment based on word counts with enhanced scoring
     const total = positiveCount + negativeCount + neutralCount
     
     let headingSentiment, contentSentiment, headingReason, contentReason
+    let headingSentimentScore = 0, contentSentimentScore = 0
+    let headingPercentages, contentPercentages
     
     if (total === 0) {
       // No sentiment indicators found
       headingSentiment = contentSentiment = 'Neutral'
       headingReason = contentReason = 'No clear sentiment indicators found in the text'
+      headingSentimentScore = contentSentimentScore = 0
+      headingPercentages = contentPercentages = { positive: 0, negative: 0, neutral: 100 }
     } else {
       // Calculate percentages
-      const positivePercent = (positiveCount / total) * 100
-      const negativePercent = (negativeCount / total) * 100
-      const neutralPercent = (neutralCount / total) * 100
+      const positivePercent = Math.round((positiveCount / total) * 100)
+      const negativePercent = Math.round((negativeCount / total) * 100)
+      const neutralPercent = Math.max(0, 100 - positivePercent - negativePercent)
+      
+      headingPercentages = contentPercentages = {
+        positive: positivePercent,
+        negative: negativePercent,
+        neutral: neutralPercent
+      }
+      
+      // Calculate sentiment score (-10 to +10)
+      const rawScore = positiveCount - negativeCount
+      const maxScore = Math.max(positiveCount + negativeCount, 1)
+      const normalizedScore = (rawScore / maxScore) * 10
+      headingSentimentScore = contentSentimentScore = Math.round(normalizedScore * 100) / 100
       
       // Determine sentiment (require at least 40% for positive/negative, otherwise neutral)
       if (positivePercent >= 40 && positivePercent > negativePercent) {
         headingSentiment = contentSentiment = 'Positive'
-        headingReason = contentReason = `Contains positive indicators (${positiveCount} positive words found)`
+        headingReason = contentReason = `Contains positive indicators (${positiveCount} positive words, ${positivePercent}% positive, score: ${headingSentimentScore})`
       } else if (negativePercent >= 40 && negativePercent > positivePercent) {
         headingSentiment = contentSentiment = 'Negative'
-        headingReason = contentReason = `Contains negative indicators (${negativeCount} negative words found)`
+        headingReason = contentReason = `Contains negative indicators (${negativeCount} negative words, ${negativePercent}% negative, score: ${headingSentimentScore})`
       } else {
         headingSentiment = contentSentiment = 'Neutral'
         if (neutralPercent > 50) {
-          headingReason = contentReason = `Primarily neutral/factual content (${neutralCount} neutral indicators)`
+          headingReason = contentReason = `Primarily neutral/factual content (${neutralCount} neutral indicators, ${neutralPercent}% neutral, score: ${headingSentimentScore})`
         } else {
-          headingReason = contentReason = `Mixed sentiment indicators (${positiveCount} positive, ${negativeCount} negative)`
+          headingReason = contentReason = `Mixed sentiment indicators (${positivePercent}% positive, ${negativePercent}% negative, score: ${headingSentimentScore})`
         }
       }
     }
     
-    console.log(`📊 Local sentiment: ${contentSentiment} (pos:${positiveCount}, neg:${negativeCount}, neu:${neutralCount})`)
+    console.log(`📊 Local sentiment: ${contentSentiment} (pos:${positiveCount}, neg:${negativeCount}, neu:${neutralCount}, score:${contentSentimentScore})`)
     
     return {
       headingSentiment,
       headingSentimentReason: headingReason,
+      headingSentimentScore,
+      headingPercentages,
       contentSentiment,
-      contentSentimentReason: contentReason
+      contentSentimentReason: contentReason,
+      contentSentimentScore,
+      contentPercentages
     }
   }
 

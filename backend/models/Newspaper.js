@@ -18,6 +18,17 @@ const articleAnalysisSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  headingSentimentScore: {
+    type: Number,
+    min: -10,
+    max: 10,
+    default: 0,
+  },
+  headingPercentages: {
+    positive: { type: Number, min: 0, max: 100, default: 0 },
+    negative: { type: Number, min: 0, max: 100, default: 0 },
+    neutral: { type: Number, min: 0, max: 100, default: 100 },
+  },
   contentSentiment: {
     type: String,
     enum: ['Positive', 'Negative', 'Neutral'],
@@ -26,6 +37,17 @@ const articleAnalysisSchema = new mongoose.Schema({
   contentSentimentReason: {
     type: String,
     default: '',
+  },
+  contentSentimentScore: {
+    type: Number,
+    min: -10,
+    max: 10,
+    default: 0,
+  },
+  contentPercentages: {
+    positive: { type: Number, min: 0, max: 100, default: 0 },
+    negative: { type: Number, min: 0, max: 100, default: 0 },
+    neutral: { type: Number, min: 0, max: 100, default: 100 },
   },
   sentimentConfidence: {
     type: String,

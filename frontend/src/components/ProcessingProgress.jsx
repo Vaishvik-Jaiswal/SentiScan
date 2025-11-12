@@ -327,7 +327,7 @@ const ProcessingProgress = ({ newspaper, onRefresh, refreshing }) => {
               Analysis Complete!
             </h3>
             <p className="text-green-600 dark:text-green-300">
-              Successfully processed {newspaper.totalArticles || 0} articles in {formatTime(elapsedTime)}
+              Successfully processed {newspaper.totalArticles || 0} articles
             </p>
           </div>
         </div>
