@@ -781,6 +781,30 @@ const NewspaperDetail = () => {
                             </p>
                           </div>
                         )}
+
+                        {/* Insights section */}
+                        {article.insights && article.insights.length > 0 && (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-400 mt-3">
+                            <h5 className="font-semibold text-blue-700 dark:text-blue-400 mb-3 flex items-center">
+                              <span className="mr-2">💡</span>
+                              {article.insights[0].startsWith('📄 Article Summary:') ? 'Article Summary' : 'Key Insights'}
+                            </h5>
+                            <div className="space-y-2">
+                              {article.insights.map((insight, idx) => (
+                                <div key={idx} className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                                  {insight.startsWith('📄 Article Summary:') ? (
+                                    <p className="italic">{insight.replace('📄 Article Summary: ', '')}</p>
+                                  ) : (
+                                    <div className="flex items-start">
+                                      <span className="text-blue-500 mr-2 mt-1 text-xs">▶</span>
+                                      <span>{insight}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {newspaper.articles?.filter(article => article.contentSentiment === 'Positive').length === 0 && (
@@ -885,6 +909,21 @@ const NewspaperDetail = () => {
                             </p>
                           </div>
                         )}
+
+                        {/* Insights section */}
+                        {article.insights && article.insights.length > 0 && article.insights[0] !== 'No insights' && (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-400 mt-3">
+                            <h5 className="font-semibold text-blue-700 dark:text-blue-400 mb-2">Key Insights:</h5>
+                            <ul className="space-y-1">
+                              {article.insights.map((insight, idx) => (
+                                <li key={idx} className="text-sm text-gray-800 dark:text-gray-200 flex items-start">
+                                  <span className="text-blue-500 mr-2">•</span>
+                                  {insight}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {newspaper.articles?.filter(article => article.contentSentiment === 'Negative').length === 0 && (
@@ -987,6 +1026,21 @@ const NewspaperDetail = () => {
                               <span className="font-semibold text-gray-700 dark:text-gray-400">Analysis: </span>
                               {article.contentSentimentReason}
                             </p>
+                          </div>
+                        )}
+
+                        {/* Insights section */}
+                        {article.insights && article.insights.length > 0 && article.insights[0] !== 'No insights' && (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-400 mt-3">
+                            <h5 className="font-semibold text-blue-700 dark:text-blue-400 mb-2">Key Insights:</h5>
+                            <ul className="space-y-1">
+                              {article.insights.map((insight, idx) => (
+                                <li key={idx} className="text-sm text-gray-800 dark:text-gray-200 flex items-start">
+                                  <span className="text-blue-500 mr-2">•</span>
+                                  {insight}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                       </div>

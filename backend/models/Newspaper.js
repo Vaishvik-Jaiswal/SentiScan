@@ -71,6 +71,10 @@ const articleAnalysisSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  insights: {
+    type: [String],
+    default: [],
+  },
 })
 
 const newspaperSchema = new mongoose.Schema(

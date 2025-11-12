@@ -1307,6 +1307,10 @@ class NewspaperProcessor {
           continue
         }
 
+        // Extract insights from the article content
+        const insights = this.extractArticleInsights(article.headline, article.content)
+        console.log(`📊 Extracted ${insights.length} insights for article: "${article.headline.substring(0, 50)}..."`, insights)
+
         analyzed.push({
           ...article,
           id: `article_${i + 1}`,
@@ -1324,7 +1328,8 @@ class NewspaperProcessor {
           sentimentConfidence: result.confidence,
           wordCount: article.content.split(/\s+/).length,
           analysisDate: new Date(),
-          analysisMethod: result.confidence === 'medium' ? 'local' : 'ai' // Track analysis method
+          analysisMethod: result.confidence === 'medium' ? 'local' : 'ai', // Track analysis method
+          insights: insights // Add extracted insights
         })
         
         // Log the sentiment result
@@ -1340,6 +1345,9 @@ class NewspaperProcessor {
 
         // Use local sentiment analysis as final fallback
         const localSentiment = this.analyzeLocalSentiment(article.headline, article.content)
+        
+        // Extract insights even in error cases
+        const insights = this.extractArticleInsights(article.headline, article.content)
         
         analyzed.push({
           ...article,
@@ -1359,7 +1367,8 @@ class NewspaperProcessor {
           wordCount: article.content.split(/\s+/).length,
           analysisDate: new Date(),
           analysisMethod: 'local-fallback',
-          analysisError: error.message
+          analysisError: error.message,
+          insights: insights // Add extracted insights
         })
         
         console.log(`✅ ${localSentiment.contentSentiment} (local): ${localSentiment.contentSentimentReason}`)
@@ -1815,6 +1824,1035 @@ class NewspaperProcessor {
     recommendations.push('Regular analysis helps identify reader engagement patterns')
 
     return recommendations
+  }
+
+  // Extract detailed insights from individual article content
+  extractArticleInsights(headline, content) {
+    console.log('🔍 Extracting detailed insights from article...')
+    console.log(`📝 Article: "${headline.substring(0, 100)}..."`)
+    
+    const fullText = (headline + ' ' + content).toLowerCase()
+    const originalText = headline + ' ' + content
+    const insights = []
+
+    try {
+      // 1. Political and Election Insights
+      const politicalInsights = this.extractPoliticalInsights(fullText, originalText)
+      insights.push(...politicalInsights)
+
+      // 2. Economic and Financial Insights
+      const economicInsights = this.extractEconomicInsights(fullText, originalText)
+      insights.push(...economicInsights)
+
+      // 3. Social and Demographic Insights
+      const socialInsights = this.extractSocialInsights(fullText, originalText)
+      insights.push(...socialInsights)
+
+      // 4. Health and Medical Insights
+      const healthInsights = this.extractHealthInsights(fullText, originalText)
+      insights.push(...healthInsights)
+
+      // 5. Technology and Innovation Insights
+      const techInsights = this.extractTechnologyInsights(fullText, originalText)
+      insights.push(...techInsights)
+
+      // 6. Environmental and Climate Insights
+      const environmentalInsights = this.extractEnvironmentalInsights(fullText, originalText)
+      insights.push(...environmentalInsights)
+
+      // 7. Sports and Entertainment Insights
+      const sportsInsights = this.extractSportsInsights(fullText, originalText)
+      insights.push(...sportsInsights)
+
+      // 8. Education and Academic Insights
+      const educationInsights = this.extractEducationInsights(fullText, originalText)
+      insights.push(...educationInsights)
+
+      // 9. Business and Corporate Insights
+      const businessInsights = this.extractBusinessInsights(fullText, originalText)
+      insights.push(...businessInsights)
+
+      // 10. Infrastructure and Development Insights
+      const infrastructureInsights = this.extractInfrastructureInsights(fullText, originalText)
+      insights.push(...infrastructureInsights)
+
+      // 11. Legal and Judicial Insights
+      const legalInsights = this.extractLegalInsights(fullText, originalText)
+      insights.push(...legalInsights)
+
+      // 12. General Statistical Insights (catch-all for any missed data)
+      const statisticalInsights = this.extractStatisticalInsights(fullText, originalText)
+      insights.push(...statisticalInsights)
+
+      console.log(`🔍 Total insights extracted: ${insights.length}`)
+      
+      // If no specific insights found, generate article summary
+      if (insights.length === 0) {
+        const summary = this.generateArticleSummary(headline, content)
+        return [summary]
+      }
+
+      // Remove duplicates with better deduplication logic
+      const uniqueInsights = this.deduplicateInsights(insights)
+      
+      // Sort insights by importance (political, economic, health first)
+      const sortedInsights = this.sortInsightsByImportance(uniqueInsights)
+      
+      return sortedInsights
+
+    } catch (error) {
+      console.error('❌ Error extracting insights:', error)
+      // Fallback to article summary
+      const summary = this.generateArticleSummary(headline, content)
+      return [summary]
+    }
+  }
+
+  // Extract political and election insights with enhanced language
+  extractPoliticalInsights(text, originalText) {
+    const insights = []
+    
+    // Enhanced political party support and survey data
+    const partyPatterns = [
+      // English patterns for party support with better context
+      /(bjp|bharatiya janata party|congress|indian national congress|aap|aam aadmi party|sp|samajwadi party|bsp|bahujan samaj party|tmc|trinamool congress|dmk|aiadmk|jdu|janata dal|rjd|rashtriya janata dal|shiv sena|ncp|nationalist congress party|left front|cpi|communist party).*?(?:leads?|leading|ahead|support|backing|favor|preference|enjoys).*?(\d+(?:\.\d+)?)\s*(?:%|percent|percentage)/gi,
+      /(\d+(?:\.\d+)?)\s*(?:%|percent|percentage).*?(?:support|favor|back|prefer|vote|choose|backing).*?(bjp|bharatiya janata party|congress|indian national congress|aap|aam aadmi party|sp|samajwadi party|bsp|bahujan samaj party|tmc|trinamool congress|dmk|aiadmk|jdu|janata dal|rjd|rashtriya janata dal|shiv sena|ncp|nationalist congress party|left front|cpi|communist party)/gi,
+      /(?:survey|poll|opinion poll|exit poll|pre-poll survey).*?(bjp|bharatiya janata party|congress|indian national congress|aap|aam aadmi party|sp|samajwadi party|bsp|bahujan samaj party|tmc|trinamool congress|dmk|aiadmk|jdu|janata dal|rjd|rashtriya janata dal|shiv sena|ncp|nationalist congress party|left front|cpi|communist party).*?(\d+(?:\.\d+)?)\s*(?:%|percent)/gi,
+      
+      // Hindi patterns with better context
+      /(भाजपा|कांग्रेस|आम आदमी पार्टी|समाजवादी पार्टी|बसपा|तृणमूल कांग्रेस|द्रमुक|अन्नाद्रमुक|जदयू|राजद|शिवसेना|राकांपा).*?(?:समर्थन|वोट|पसंद).*?(\d+(?:\.\d+)?)\s*(?:%|प्रतिशत|फीसदी)/gi,
+      /(\d+(?:\.\d+)?)\s*(?:%|प्रतिशत|फीसदी).*?(?:समर्थन|वोट|पसंद).*?(भाजपा|कांग्रेस|आम आदमी पार्टी|समाजवादी पार्टी|बसपा|तृणमूल कांग्रेस|द्रमुक|अन्नाद्रमुक|जदयू|राजद|शिवसेना|राकांपा)/gi,
+      
+      // Gujarati patterns with better context
+      /(ભાજપ|કોંગ્રેસ|આમ આદમી પાર્ટી).*?(?:સમર્થન|મત).*?(\d+(?:\.\d+)?)\s*(?:%|ટકા)/gi,
+      /(\d+(?:\.\d+)?)\s*(?:%|ટકા).*?(?:સમર્થન|મત).*?(ભાજપ|કોંગ્રેસ|આમ આદમી પાર્ટી)/gi
+    ]
+
+    partyPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const party = (match[1] && isNaN(parseFloat(match[1]))) ? match[1] : match[2]
+        const percentage = (match[1] && !isNaN(parseFloat(match[1]))) ? match[1] : match[2]
+        
+        if (party && percentage && !isNaN(parseFloat(percentage))) {
+          const partyName = this.normalizePartyName(party.trim())
+          const percentValue = parseFloat(percentage)
+          
+          if (percentValue > 50) {
+            insights.push(`🗳️ ${partyName} commands strong public support with ${percentage}% voter preference, indicating a dominant position in the political landscape`)
+          } else if (percentValue > 30) {
+            insights.push(`🗳️ ${partyName} maintains significant voter support at ${percentage}%, positioning itself as a major political contender`)
+          } else {
+            insights.push(`🗳️ ${partyName} holds ${percentage}% voter support according to recent polling data`)
+          }
+        }
+      }
+    })
+
+    // Enhanced voter turnout data with context
+    const turnoutPatterns = [
+      /(?:voter turnout|voting percentage|turnout|participation).*?(\d+(?:\.\d+)?)\s*(?:%|percent)/gi,
+      /(\d+(?:\.\d+)?)\s*(?:%|percent).*?(?:voter turnout|voting|participated|cast.*votes)/gi,
+      /(?:मतदान प्रतिशत|वोटिंग|मतदान).*?(\d+(?:\.\d+)?)\s*(?:%|प्रतिशत|फीसदी)/gi,
+      /(?:મતદાન ટકાવારી|વોટિંગ|મતદાન).*?(\d+(?:\.\d+)?)\s*(?:%|ટકા)/gi
+    ]
+
+    turnoutPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const percentage = parseFloat(match[1])
+        if (percentage && !isNaN(percentage)) {
+          if (percentage > 70) {
+            insights.push(`📊 Exceptional democratic participation recorded with ${percentage}% voter turnout, reflecting high civic engagement`)
+          } else if (percentage > 60) {
+            insights.push(`📊 Strong voter participation observed with ${percentage}% turnout, indicating active democratic involvement`)
+          } else if (percentage > 50) {
+            insights.push(`📊 Moderate voter turnout of ${percentage}% recorded in the electoral process`)
+          } else {
+            insights.push(`📊 Voter turnout stood at ${percentage}%, suggesting room for improved civic participation`)
+          }
+        }
+      }
+    })
+
+    // Enhanced seat/constituency data with better language
+    const seatPatterns = [
+      /(bjp|congress|aap|sp|bsp|tmc|dmk|aiadmk|jdu|rjd|shiv sena|ncp).*?(?:won|wins|secured|gained|captured).*?(\d+)\s*(?:seats?|constituencies)/gi,
+      /(\d+)\s*(?:seats?|constituencies).*?(?:won|secured|gained|captured).*?(bjp|congress|aap|sp|bsp|tmc|dmk|aiadmk|jdu|rjd|shiv sena|ncp)/gi,
+      /(?:भाजपा|कांग्रेस|आप|सपा|बसपा).*?(\d+).*?(?:सीट|सीटें|क्षेत्र)/gi,
+      /(\d+).*?(?:सीट|सीटें|क्षेत्र).*?(?:भाजपा|कांग्रेस|आप|सपा|बसपा)/gi
+    ]
+
+    seatPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const party = (match[1] && isNaN(parseInt(match[1]))) ? match[1] : match[2]
+        const seats = (match[1] && !isNaN(parseInt(match[1]))) ? match[1] : match[2]
+        
+        if (party && seats && !isNaN(parseInt(seats))) {
+          const partyName = this.normalizePartyName(party.trim())
+          const seatCount = parseInt(seats)
+          
+          if (seatCount > 100) {
+            insights.push(`🏆 ${partyName} achieved a decisive electoral victory by securing ${seats} constituencies, establishing clear mandate`)
+          } else if (seatCount > 50) {
+            insights.push(`🏆 ${partyName} demonstrated strong electoral performance by winning ${seats} seats across constituencies`)
+          } else if (seatCount > 10) {
+            insights.push(`🏆 ${partyName} secured ${seats} constituencies in the electoral contest`)
+          } else {
+            insights.push(`🏆 ${partyName} won ${seats} seats in the election`)
+          }
+        }
+      }
+    })
+
+    // Political alliance and coalition insights
+    const alliancePatterns = [
+      /(?:alliance|coalition|front).*?(?:formed|announced|declared).*?(\d+)\s*(?:parties|members)/gi,
+      /(\d+)\s*(?:parties|members).*?(?:alliance|coalition|front)/gi
+    ]
+
+    alliancePatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const count = match[1]
+        if (count && !isNaN(parseInt(count))) {
+          insights.push(`🤝 Political alliance formation involves ${count} parties, indicating strategic coalition building for electoral advantage`)
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract economic and financial insights with enhanced language
+  extractEconomicInsights(text, originalText) {
+    const insights = []
+
+    // Enhanced GDP, inflation, growth rates with better context
+    const economicPatterns = [
+      /(?:gdp|gross domestic product).*?(?:growth|increased?|decreased?|declined?|expanded?|contracted?).*?(\d+(?:\.\d+)?)\s*(?:%|percent)/gi,
+      /(?:inflation|price rise|consumer price index|cpi|महंगाई|મોંઘવારી).*?(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા)/gi,
+      /(?:unemployment|jobless|joblessness|बेरोजगारी|બેરોજગારી).*?(?:rate|level).*?(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા)/gi,
+      /(?:budget|allocation|spending|expenditure|outlay|बजट|બજેટ).*?(?:₹|rs\.?|rupees?|crore|lakh|billion|million|करोड़|લાખ|કરોડ)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million|करोड़|લાખ|કરોડ)/gi,
+      /(?:revenue|income|profit|loss|earnings|turnover|आय|નફો).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million|करोड़|લાખ|કરોડ)/gi,
+      /(?:fiscal deficit|current account deficit|trade deficit).*?(\d+(?:\.\d+)?)\s*(?:%|percent)/gi,
+      /(?:interest rate|repo rate|bank rate).*?(\d+(?:\.\d+)?)\s*(?:%|percent)/gi
+    ]
+
+    economicPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const numValue = parseFloat(value.replace(/,/g, ''))
+        if (value && !isNaN(numValue)) {
+          const context = match[0].toLowerCase()
+          
+          if (context.includes('gdp')) {
+            if (numValue > 7) {
+              insights.push(`📈 Robust economic expansion recorded with GDP growth rate of ${value}%, indicating strong economic momentum`)
+            } else if (numValue > 5) {
+              insights.push(`📈 Healthy economic growth observed at ${value}% GDP expansion, reflecting positive economic trends`)
+            } else if (numValue > 0) {
+              insights.push(`📈 Moderate economic growth of ${value}% GDP recorded, showing steady economic progress`)
+            } else {
+              insights.push(`📉 Economic contraction noted with GDP declining by ${Math.abs(numValue)}%, signaling economic challenges`)
+            }
+          } else if (context.includes('inflation')) {
+            if (numValue > 6) {
+              insights.push(`💰 High inflation rate of ${value}% recorded, indicating significant price pressures in the economy`)
+            } else if (numValue > 4) {
+              insights.push(`💰 Moderate inflation at ${value}% observed, reflecting controlled price rise trends`)
+            } else if (numValue > 2) {
+              insights.push(`💰 Inflation rate stands at ${value}%, within manageable economic parameters`)
+            } else {
+              insights.push(`💰 Low inflation of ${value}% recorded, indicating price stability in the market`)
+            }
+          } else if (context.includes('unemployment')) {
+            if (numValue > 8) {
+              insights.push(`👥 High unemployment rate of ${value}% highlights significant job market challenges requiring policy intervention`)
+            } else if (numValue > 5) {
+              insights.push(`👥 Unemployment rate at ${value}% indicates moderate job market stress`)
+            } else {
+              insights.push(`👥 Unemployment rate of ${value}% reflects relatively stable job market conditions`)
+            }
+          } else if (context.includes('budget') || context.includes('allocation') || context.includes('spending')) {
+            const croreValue = numValue
+            if (croreValue > 10000) {
+              insights.push(`💼 Massive budget allocation of ₹${value} crore announced, representing significant government investment`)
+            } else if (croreValue > 1000) {
+              insights.push(`💼 Substantial budget provision of ₹${value} crore allocated for development initiatives`)
+            } else {
+              insights.push(`💼 Budget allocation of ₹${value} crore designated for specific programs`)
+            }
+          } else if (context.includes('revenue') || context.includes('profit') || context.includes('income')) {
+            insights.push(`💵 Financial performance shows ₹${value} crore in revenue generation, indicating business activity`)
+          } else if (context.includes('deficit')) {
+            insights.push(`📊 Fiscal deficit stands at ${value}%, reflecting government's financial position`)
+          } else if (context.includes('interest rate') || context.includes('repo rate')) {
+            insights.push(`🏦 Monetary policy adjustment with interest rate at ${value}%, impacting borrowing costs`)
+          }
+        }
+      }
+    })
+
+    // Enhanced stock market data with better context
+    const stockPatterns = [
+      /(?:sensex|nifty|bse|nse).*?(?:up|down|gained?|lost|fell|rose|surged?|plunged?).*?(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:points?)/gi,
+      /(?:stock|share|equity).*?(?:price|value|trading).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)/gi,
+      /(?:market cap|market capitalization|valuation).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(?:ipo|initial public offering).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi
+    ]
+
+    stockPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const numValue = parseFloat(value.replace(/,/g, ''))
+        if (value && !isNaN(numValue)) {
+          const context = match[0].toLowerCase()
+          
+          if (context.includes('sensex') || context.includes('nifty')) {
+            if (context.includes('up') || context.includes('gained') || context.includes('rose') || context.includes('surged')) {
+              insights.push(`📊 Stock market shows positive momentum with ${numValue.toLocaleString()} points gain, reflecting investor confidence`)
+            } else if (context.includes('down') || context.includes('lost') || context.includes('fell') || context.includes('plunged')) {
+              insights.push(`📊 Stock market experiences decline with ${numValue.toLocaleString()} points drop, indicating market volatility`)
+            } else {
+              insights.push(`📊 Stock market movement of ${numValue.toLocaleString()} points recorded in trading session`)
+            }
+          } else if (context.includes('market cap') || context.includes('valuation')) {
+            insights.push(`🏢 Corporate valuation reaches ₹${value} crore, highlighting significant market presence`)
+          } else if (context.includes('ipo')) {
+            insights.push(`🚀 IPO launch valued at ₹${value} crore, indicating new investment opportunity in capital markets`)
+          } else {
+            insights.push(`💹 Stock trading activity shows ₹${value} value, reflecting market dynamics`)
+          }
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract social and demographic insights with enhanced language
+  extractSocialInsights(text, originalText) {
+    const insights = []
+
+    // Enhanced population and demographic data
+    const demographicPatterns = [
+      /(?:population|people|citizens|residents|जनसंख्या|વસ્તી).*?(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|million|billion|thousand|करोड़|લાખ|કરોડ)/gi,
+      /(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા).*?(?:women|female|men|male|children|youth|elderly|senior citizens|महिला|પુરુષ|મહિલા)/gi,
+      /(?:literacy rate|education|educational attainment|साक्षरता|શિક્ષણ).*?(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા)/gi,
+      /(?:poverty|below poverty line|bpl|गरीबी|ગરીબી).*?(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા)/gi,
+      /(?:birth rate|death rate|mortality rate).*?(\d+(?:\.\d+)?)\s*(?:per|\/)/gi,
+      /(?:life expectancy|average age).*?(\d+(?:\.\d+)?)\s*(?:years?)/gi
+    ]
+
+    demographicPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const numValue = parseFloat(value.replace(/,/g, ''))
+        if (value && !isNaN(numValue)) {
+          const context = match[0].toLowerCase()
+          
+          if (context.includes('population') || context.includes('people') || context.includes('citizens')) {
+            if (numValue >= 1) {
+              insights.push(`👥 Significant population data shows ${value} crore people affected, highlighting demographic scale`)
+            } else {
+              insights.push(`👥 Population statistics indicate ${value} lakh residents, showing community size`)
+            }
+          } else if (context.includes('literacy') || context.includes('education')) {
+            if (numValue > 90) {
+              insights.push(`📚 Exceptional literacy achievement with ${value}% rate, demonstrating educational excellence`)
+            } else if (numValue > 75) {
+              insights.push(`📚 Strong educational progress shown by ${value}% literacy rate, indicating good learning outcomes`)
+            } else if (numValue > 50) {
+              insights.push(`📚 Moderate literacy rate of ${value}% recorded, showing room for educational improvement`)
+            } else {
+              insights.push(`📚 Literacy rate at ${value}% highlights need for enhanced educational initiatives`)
+            }
+          } else if (context.includes('poverty') || context.includes('bpl')) {
+            if (numValue > 30) {
+              insights.push(`💔 High poverty rate of ${value}% indicates significant socio-economic challenges requiring intervention`)
+            } else if (numValue > 15) {
+              insights.push(`💔 Moderate poverty level at ${value}% shows ongoing socio-economic development needs`)
+            } else {
+              insights.push(`💔 Poverty rate of ${value}% reflects improving socio-economic conditions`)
+            }
+          } else if (context.includes('women') || context.includes('female')) {
+            insights.push(`👩 Gender demographics show ${value}% female representation, indicating social composition`)
+          } else if (context.includes('children') || context.includes('youth')) {
+            insights.push(`👶 Youth demographics indicate ${value}% young population, showing age distribution patterns`)
+          } else if (context.includes('life expectancy')) {
+            insights.push(`⏰ Life expectancy data shows ${value} years average, reflecting health and living standards`)
+          } else {
+            insights.push(`📊 Demographic indicator shows ${value}% distribution, providing social insights`)
+          }
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract health and medical insights with enhanced language
+  extractHealthInsights(text, originalText) {
+    const insights = []
+
+    // Enhanced health statistics and medical data
+    const healthPatterns = [
+      /(?:covid|coronavirus|pandemic|कोविड|કોવિડ).*?(?:cases|patients|infected|positive|मामले|કેસ).*?(\d+(?:,\d+)*)/gi,
+      /(?:vaccination|immunization|vaccine|टीकाकरण|રસીકરણ).*?(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા)/gi,
+      /(?:mortality|death|fatality|मृत्यु|મૃત્યુ).*?rate.*?(\d+(?:\.\d+)?)\s*(?:%|percent|per|\/|प्रतिशत|ટકા)/gi,
+      /(?:recovery rate|survival rate|cure rate|ठीक होने की दर|સાજા થવાનો દર).*?(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા)/gi,
+      /(?:hospital|medical facility|health center|अस्पताल|હોસ્પિટલ).*?(?:beds|capacity).*?(\d+(?:,\d+)*)/gi,
+      /(?:doctors|physicians|medical staff|डॉक्टर|ડૉક્ટર).*?(\d+(?:,\d+)*)/gi,
+      /(?:disease|illness|epidemic|बीमारी|રોગ).*?(\d+(?:,\d+)*)\s*(?:cases|patients)/gi
+    ]
+
+    healthPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const numValue = parseFloat(value.replace(/,/g, ''))
+        if (value && !isNaN(numValue)) {
+          const context = match[0].toLowerCase()
+          
+          if (context.includes('covid') || context.includes('coronavirus') || context.includes('pandemic')) {
+            if (numValue > 10000) {
+              insights.push(`🦠 Significant COVID-19 impact with ${value} cases reported, indicating major health challenge`)
+            } else if (numValue > 1000) {
+              insights.push(`🦠 Moderate COVID-19 cases at ${value}, showing ongoing health monitoring needs`)
+            } else {
+              insights.push(`🦠 COVID-19 cases reported at ${value}, reflecting current health status`)
+            }
+          } else if (context.includes('vaccination') || context.includes('immunization')) {
+            if (numValue > 80) {
+              insights.push(`💉 Excellent vaccination coverage achieved at ${value}%, demonstrating strong public health response`)
+            } else if (numValue > 60) {
+              insights.push(`💉 Good vaccination progress with ${value}% coverage, showing effective immunization drive`)
+            } else if (numValue > 40) {
+              insights.push(`💉 Moderate vaccination rate of ${value}% recorded, indicating ongoing immunization efforts`)
+            } else {
+              insights.push(`💉 Vaccination coverage at ${value}%, highlighting need for enhanced immunization programs`)
+            }
+          } else if (context.includes('mortality') || context.includes('death') || context.includes('fatality')) {
+            if (numValue > 5) {
+              insights.push(`⚕️ High mortality rate of ${value}% indicates serious health concerns requiring immediate attention`)
+            } else if (numValue > 2) {
+              insights.push(`⚕️ Moderate mortality rate at ${value}%, showing manageable health outcomes`)
+            } else {
+              insights.push(`⚕️ Low mortality rate of ${value}% reflects positive health management`)
+            }
+          } else if (context.includes('recovery') || context.includes('survival')) {
+            if (numValue > 90) {
+              insights.push(`🏥 Excellent recovery rate of ${value}% demonstrates effective medical treatment and care`)
+            } else if (numValue > 75) {
+              insights.push(`🏥 Good recovery rate at ${value}%, showing positive medical outcomes`)
+            } else {
+              insights.push(`🏥 Recovery rate of ${value}% indicates ongoing medical care improvements needed`)
+            }
+          } else if (context.includes('hospital') || context.includes('beds')) {
+            insights.push(`🏥 Healthcare infrastructure shows ${value} bed capacity, indicating medical facility readiness`)
+          } else if (context.includes('doctors') || context.includes('medical staff')) {
+            insights.push(`👨‍⚕️ Medical workforce comprises ${value} healthcare professionals, showing human resource availability`)
+          } else {
+            insights.push(`🩺 Health statistics show ${value} cases, providing medical insights`)
+          }
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract technology insights with enhanced language
+  extractTechnologyInsights(text, originalText) {
+    const insights = []
+
+    // Enhanced technology adoption and digital metrics
+    const techPatterns = [
+      /(?:internet|digital|online|cyber|इंटरनेट|ઇન્ટરનેટ).*?(?:users?|adoption|penetration|connectivity|उपयोगकर्ता|વપરાશકર્તા).*?(\d+(?:\.\d+)?)\s*(?:%|percent|million|crore|प्रतिशत|ટકા|करोड़|કરોડ)/gi,
+      /(?:smartphone|mobile|tablet|device|स्मार्टफोन|સ્માર્ટફોન).*?(?:users?|penetration|sales|उपयोगकर्ता|વપરાશકર્તા).*?(\d+(?:\.\d+)?)\s*(?:%|percent|million|crore|प्रतिशत|ટકા|करोड़|કરોડ)/gi,
+      /(?:5g|4g|3g|broadband|fiber|wifi|ब्रॉडबैंड|બ્રોડબેન્ડ).*?(?:speed|connectivity).*?(\d+(?:\.\d+)?)\s*(?:mbps|gbps|gb|mb|tb)/gi,
+      /(?:app|application|software|platform).*?(?:downloads|installs|users|डाउनलोड|ડાઉનલોડ).*?(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:million|crore|lakh|thousand|करोड़|લાખ|કરોડ)/gi,
+      /(?:ai|artificial intelligence|machine learning|automation).*?(?:implementation|adoption|investment).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(?:startup|tech company|innovation).*?(?:funding|investment|valuation).*?(?:₹|rs\.?|\$|dollars?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi
+    ]
+
+    techPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const numValue = parseFloat(value.replace(/,/g, ''))
+        if (value && !isNaN(numValue)) {
+          const context = match[0].toLowerCase()
+          
+          if (context.includes('internet') || context.includes('digital') || context.includes('online')) {
+            if (numValue > 80) {
+              insights.push(`🌐 Exceptional digital penetration with ${value}% internet adoption, indicating advanced digital society`)
+            } else if (numValue > 60) {
+              insights.push(`🌐 Strong digital connectivity at ${value}% internet penetration, showing good technological progress`)
+            } else if (numValue > 40) {
+              insights.push(`🌐 Moderate digital adoption with ${value}% internet users, indicating growing tech awareness`)
+            } else {
+              insights.push(`🌐 Digital connectivity at ${value}% shows potential for technological expansion`)
+            }
+          } else if (context.includes('smartphone') || context.includes('mobile')) {
+            if (context.includes('crore') || context.includes('million')) {
+              insights.push(`📱 Massive mobile adoption with ${value} crore smartphone users, demonstrating digital revolution`)
+            } else {
+              insights.push(`📱 Mobile penetration reaches ${value}%, showing widespread smartphone adoption`)
+            }
+          } else if (context.includes('5g') || context.includes('4g') || context.includes('broadband')) {
+            insights.push(`📡 Advanced connectivity infrastructure offers ${value} Mbps speed, enabling high-speed digital services`)
+          } else if (context.includes('app') || context.includes('downloads')) {
+            insights.push(`📲 Digital platform engagement shows ${value} million downloads, indicating strong user adoption`)
+          } else if (context.includes('ai') || context.includes('artificial intelligence')) {
+            insights.push(`🤖 AI technology investment of ₹${value} crore signals advanced technological transformation`)
+          } else if (context.includes('startup') || context.includes('tech company')) {
+            insights.push(`🚀 Technology sector funding reaches ₹${value} crore, boosting innovation ecosystem`)
+          } else {
+            insights.push(`💻 Technology metrics show ${value} adoption rate, reflecting digital transformation`)
+          }
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract environmental insights
+  extractEnvironmentalInsights(text) {
+    const insights = []
+
+    // Environmental and climate data
+    const environmentalPatterns = [
+      /(?:temperature|तापमान|તાપમાન).*?(\d+(?:\.\d+)?)\s*(?:degrees?|celsius|fahrenheit|डिग्री|ડિગ્રી)/gi,
+      /(?:rainfall|precipitation|बारिश|વરસાદ).*?(\d+(?:\.\d+)?)\s*(?:mm|millimeters?|inches?|मिमी|મિમી)/gi,
+      /(?:pollution|air quality|प्रदूषण|પ્રદૂષણ).*?(?:aqi|index).*?(\d+)/gi,
+      /(?:carbon|co2|कार्बन|કાર્બન).*?(\d+(?:\.\d+)?)\s*(?:ppm|tons?|tonnes?|टन|ટન)/gi
+    ]
+
+    environmentalPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        if (value && !isNaN(parseFloat(value))) {
+          const context = match[0].substring(0, 80).trim()
+          insights.push(`Environmental Data: ${context}`)
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract sports insights
+  extractSportsInsights(text) {
+    const insights = []
+
+    // Sports scores and statistics
+    const sportsPatterns = [
+      /(?:scored?|runs?|goals?|points?|स्कोर|ગોલ).*?(\d+(?:-\d+)?)/gi,
+      /(?:won|victory|जीत|જીત).*?(\d+(?:-\d+)?)/gi,
+      /(?:cricket|football|hockey|tennis|क्रिकेट|ક્રિકેટ).*?(?:match|game|खेल|રમત).*?(\d+(?:-\d+)?)/gi
+    ]
+
+    sportsPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const score = match[1]
+        if (score && /\d/.test(score)) {
+          const context = match[0].substring(0, 60).trim()
+          insights.push(`Sports Data: ${context}`)
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract education insights
+  extractEducationInsights(text) {
+    const insights = []
+
+    // Education statistics and academic data
+    const educationPatterns = [
+      /(?:pass|passing|result|परिणाम|પરિણામ).*?(?:rate|percentage).*?(\d+(?:\.\d+)?)\s*(?:%|percent|प्रतिशत|ટકા)/gi,
+      /(?:admission|enrollment|प्रवेश|પ્રવેશ).*?(\d+(?:,\d+)*)/gi,
+      /(?:students?|छात्र|વિદ્યાર્થી).*?(\d+(?:,\d+)*)/gi,
+      /(?:scholarship|छात्रवृत्ति|શિષ્યવૃત્તિ).*?(?:₹|rs\.?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|करोड़|લાખ)/gi
+    ]
+
+    educationPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        if (value && !isNaN(parseFloat(value.replace(/,/g, '')))) {
+          const context = match[0].substring(0, 80).trim()
+          insights.push(`Education Data: ${context}`)
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract comprehensive business and corporate insights
+  extractBusinessInsights(text, originalText) {
+    const insights = []
+    
+    // Enhanced business patterns with more comprehensive coverage
+    const businessPatterns = [
+      // Financial performance patterns
+      /(?:company|corporation|firm|business|enterprise).*?(?:profit|revenue|sales|turnover|earnings|income).*?(?:₹|rs\.?|rupees?|\$|dollars?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million|thousand)/gi,
+      /(?:quarterly|annual|yearly).*?(?:profit|revenue|sales|earnings).*?(?:₹|rs\.?|rupees?|\$|dollars?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      
+      // Corporate deals and transactions
+      /(?:merger|acquisition|deal|takeover|buyout).*?(?:worth|valued|₹|rs\.?|rupees?|\$|dollars?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(?:ipo|initial public offering|public listing).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      
+      // Investment and funding patterns
+      /(?:investment|funding|raised|secured|attracted).*?(?:₹|rs\.?|rupees?|\$|dollars?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(?:venture capital|private equity|angel investment|seed funding).*?(?:₹|rs\.?|rupees?|\$|dollars?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      
+      // Employment and workforce patterns
+      /(?:jobs|employment|hiring|recruitment|workforce).*?(\d+(?:,\d+)*)\s*(?:people|employees|positions|jobs|workers)/gi,
+      /(?:layoffs|job cuts|downsizing|retrenchment).*?(\d+(?:,\d+)*)\s*(?:people|employees|positions|jobs|workers)/gi,
+      
+      // Market and stock patterns
+      /(?:stock price|share price|market cap|valuation).*?(?:₹|rs\.?|rupees?|\$|dollars?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million|per share)/gi,
+      /(?:market share|market position).*?(\d+(?:\.\d+)?)\s*(?:%|percent|percentage)/gi,
+      
+      // Production and capacity patterns
+      /(?:production|manufacturing|output|capacity).*?(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:units|tonnes|tons|pieces|items|vehicles|products)/gi,
+      
+      // Expansion and growth patterns
+      /(?:expansion|growth|increase|rise).*?(\d+(?:\.\d+)?)\s*(?:%|percent|percentage|times|fold)/gi,
+      /(?:new|additional|extra).*?(?:stores|outlets|branches|offices|facilities).*?(\d+(?:,\d+)*)/gi
+    ]
+
+    businessPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const numValue = parseFloat(value.replace(/,/g, ''))
+        if (value && !isNaN(numValue)) {
+          const context = match[0].toLowerCase()
+          
+          if (context.includes('profit') || context.includes('revenue') || context.includes('earnings') || context.includes('income')) {
+            if (numValue > 1000) {
+              insights.push(`🏢 Exceptional corporate financial performance with ₹${value} crore in earnings, demonstrating strong business growth and market leadership`)
+            } else if (numValue > 100) {
+              insights.push(`🏢 Strong corporate financial results showing ₹${value} crore in earnings, indicating healthy business performance`)
+            } else {
+              insights.push(`🏢 Corporate financial performance records ₹${value} crore in earnings, reflecting business operations`)
+            }
+          } else if (context.includes('merger') || context.includes('acquisition') || context.includes('takeover')) {
+            if (numValue > 5000) {
+              insights.push(`🤝 Mega corporate deal worth ₹${value} crore announced, significantly reshaping the industry landscape and market dynamics`)
+            } else if (numValue > 1000) {
+              insights.push(`🤝 Major corporate transaction valued at ₹${value} crore, creating substantial market consolidation`)
+            } else {
+              insights.push(`🤝 Corporate deal worth ₹${value} crore announced, contributing to industry restructuring`)
+            }
+          } else if (context.includes('ipo') || context.includes('public listing')) {
+            insights.push(`📈 Public market debut with ₹${value} crore IPO, marking significant corporate milestone and investor opportunity`)
+          } else if (context.includes('investment') || context.includes('funding') || context.includes('raised')) {
+            if (numValue > 500) {
+              insights.push(`💰 Substantial investment of ₹${value} crore secured, enabling major business expansion and strategic initiatives`)
+            } else if (numValue > 100) {
+              insights.push(`💰 Significant funding of ₹${value} crore raised, supporting business growth and development plans`)
+            } else {
+              insights.push(`💰 Investment of ₹${value} crore secured, boosting business expansion capabilities`)
+            }
+          } else if (context.includes('venture capital') || context.includes('private equity')) {
+            insights.push(`🚀 Strategic venture funding of ₹${value} crore obtained, accelerating startup growth and innovation`)
+          } else if (context.includes('jobs') || context.includes('employment') || context.includes('hiring')) {
+            if (numValue > 10000) {
+              insights.push(`👔 Massive employment generation with ${value} new positions created, significantly contributing to job market expansion`)
+            } else if (numValue > 1000) {
+              insights.push(`👔 Substantial job creation with ${value} new employment opportunities, boosting workforce development`)
+            } else {
+              insights.push(`👔 Employment opportunity creation with ${value} new positions, contributing to job market growth`)
+            }
+          } else if (context.includes('layoffs') || context.includes('job cuts')) {
+            insights.push(`📉 Workforce reduction affecting ${value} employees, indicating corporate restructuring and cost optimization`)
+          } else if (context.includes('stock price') || context.includes('share price') || context.includes('market cap')) {
+            insights.push(`📊 Market valuation reaches ₹${value} crore, reflecting investor confidence and corporate worth`)
+          } else if (context.includes('market share')) {
+            if (numValue > 50) {
+              insights.push(`🎯 Dominant market position with ${value}% market share, indicating industry leadership`)
+            } else if (numValue > 25) {
+              insights.push(`🎯 Strong market presence with ${value}% market share, showing competitive positioning`)
+            } else {
+              insights.push(`🎯 Market share stands at ${value}%, reflecting competitive market position`)
+            }
+          } else if (context.includes('production') || context.includes('manufacturing') || context.includes('output')) {
+            insights.push(`🏭 Production capacity reaches ${value} units, demonstrating manufacturing scale and operational efficiency`)
+          } else if (context.includes('expansion') || context.includes('growth') && context.includes('%')) {
+            if (numValue > 50) {
+              insights.push(`📈 Exceptional business growth of ${value}% achieved, indicating remarkable expansion and market success`)
+            } else if (numValue > 20) {
+              insights.push(`📈 Strong business growth at ${value}% recorded, showing healthy expansion trajectory`)
+            } else {
+              insights.push(`📈 Business growth of ${value}% observed, reflecting positive development trends`)
+            }
+          } else if (context.includes('stores') || context.includes('outlets') || context.includes('branches')) {
+            insights.push(`🏪 Business expansion with ${value} new retail locations, strengthening market presence and customer reach`)
+          } else {
+            insights.push(`🏢 Business metric shows ${value} performance indicator, providing corporate insights`)
+          }
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract infrastructure and development insights
+  extractInfrastructureInsights(text, originalText) {
+    const insights = []
+    
+    const infraPatterns = [
+      /(?:road|highway|bridge|tunnel|railway|metro).*?(?:construction|built|completed).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(?:project|scheme|initiative).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(?:hospital|school|college|university).*?(?:built|constructed|established).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(\d+)\s*(?:km|kilometers|miles).*?(?:road|highway|railway|metro)/gi
+    ]
+
+    infraPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const context = match[0].toLowerCase()
+        
+        if (context.includes('road') || context.includes('highway') || context.includes('bridge')) {
+          if (value.includes('crore') || value.includes('lakh')) {
+            insights.push(`🛣️ Major infrastructure development with ₹${value} crore investment in transportation network`)
+          } else {
+            insights.push(`🛣️ Transportation infrastructure expansion covers ${value} km, improving connectivity`)
+          }
+        } else if (context.includes('hospital') || context.includes('school')) {
+          insights.push(`🏥 Social infrastructure development with ₹${value} crore investment in public facilities`)
+        } else if (context.includes('project') || context.includes('scheme')) {
+          insights.push(`🏗️ Development project worth ₹${value} crore launched, boosting regional growth`)
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract legal and judicial insights
+  extractLegalInsights(text, originalText) {
+    const insights = []
+    
+    const legalPatterns = [
+      /(?:court|judge|verdict|judgment|ruling).*?(?:sentenced?|fined?|penalty).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|years?|months?)/gi,
+      /(?:case|lawsuit|litigation).*?(?:₹|rs\.?|rupees?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:crore|lakh|billion|million)/gi,
+      /(?:arrested|detained|custody).*?(\d+)\s*(?:people|persons|individuals)/gi
+    ]
+
+    legalPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[1]
+        const context = match[0].toLowerCase()
+        
+        if (context.includes('sentenced') || context.includes('penalty')) {
+          if (context.includes('years') || context.includes('months')) {
+            insights.push(`⚖️ Judicial decision results in ${value} imprisonment, upholding rule of law`)
+          } else {
+            insights.push(`⚖️ Legal penalty of ₹${value} imposed by court, ensuring accountability`)
+          }
+        } else if (context.includes('case') || context.includes('lawsuit')) {
+          insights.push(`⚖️ Legal proceedings involve ₹${value} crore, highlighting significant judicial matter`)
+        } else if (context.includes('arrested') || context.includes('detained')) {
+          insights.push(`🚔 Law enforcement action results in ${value} arrests, maintaining public order`)
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Extract general statistical insights (catch-all)
+  extractStatisticalInsights(text, originalText) {
+    const insights = []
+    
+    // General percentage patterns
+    const percentagePatterns = [
+      /(\d+(?:\.\d+)?)\s*(?:%|percent|percentage).*?(?:increase|decrease|rise|fall|growth|decline)/gi,
+      /(?:increase|decrease|rise|fall|growth|decline).*?(\d+(?:\.\d+)?)\s*(?:%|percent|percentage)/gi
+    ]
+
+    percentagePatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const percentage = match[1]
+        const context = match[0].substring(0, 100).trim()
+        
+        if (!context.toLowerCase().includes('gdp') && 
+            !context.toLowerCase().includes('inflation') && 
+            !context.toLowerCase().includes('unemployment') &&
+            !context.toLowerCase().includes('turnout')) {
+          insights.push(`📊 Statistical trend shows ${percentage}% change, indicating measurable impact in the sector`)
+        }
+      }
+    })
+
+    // General numerical data
+    const numberPatterns = [
+      /(\d+(?:,\d+)*)\s*(?:people|persons|individuals|citizens|residents)/gi,
+      /(\d+(?:,\d+)*)\s*(?:students|children|women|men)/gi,
+      /(\d+(?:,\d+)*)\s*(?:houses|homes|buildings|units)/gi
+    ]
+
+    numberPatterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const number = match[1]
+        const context = match[0].toLowerCase()
+        
+        if (context.includes('people') || context.includes('persons')) {
+          insights.push(`👥 Population data indicates ${number} individuals affected, showing scale of impact`)
+        } else if (context.includes('students') || context.includes('children')) {
+          insights.push(`🎓 Educational demographics show ${number} beneficiaries, highlighting educational reach`)
+        } else if (context.includes('houses') || context.includes('homes')) {
+          insights.push(`🏠 Housing data reveals ${number} residential units, indicating development scale`)
+        }
+      }
+    })
+
+    return insights
+  }
+
+  // Enhanced deduplication of insights
+  deduplicateInsights(insights) {
+    const unique = []
+    const seenPatterns = new Set()
+    
+    for (const insight of insights) {
+      // Create a pattern signature for better deduplication
+      const signature = this.createInsightSignature(insight)
+      
+      // Also check for semantic similarity with existing insights
+      let isDuplicate = false
+      
+      if (seenPatterns.has(signature)) {
+        isDuplicate = true
+      } else {
+        // Check for semantic similarity with existing insights
+        for (const existingInsight of unique) {
+          if (this.areInsightsSimilar(insight, existingInsight)) {
+            isDuplicate = true
+            break
+          }
+        }
+      }
+      
+      if (!isDuplicate) {
+        seenPatterns.add(signature)
+        unique.push(insight)
+      }
+    }
+    
+    return unique
+  }
+  
+  // Check if two insights are semantically similar
+  areInsightsSimilar(insight1, insight2) {
+    // Extract numbers from both insights
+    const numbers1 = insight1.match(/\d+(?:\.\d+)?/g) || []
+    const numbers2 = insight2.match(/\d+(?:\.\d+)?/g) || []
+    
+    // If they have the same numbers, they might be duplicates
+    if (numbers1.length > 0 && numbers2.length > 0) {
+      const commonNumbers = numbers1.filter(num => numbers2.includes(num))
+      if (commonNumbers.length > 0) {
+        // Check if they're talking about the same topic
+        const words1 = new Set(insight1.toLowerCase().split(/\s+/).filter(w => w.length > 4))
+        const words2 = new Set(insight2.toLowerCase().split(/\s+/).filter(w => w.length > 4))
+        
+        const commonWords = [...words1].filter(word => words2.has(word))
+        const similarity = commonWords.length / Math.max(words1.size, words2.size)
+        
+        return similarity > 0.4 // 40% word overlap with same numbers = likely duplicate
+      }
+    }
+    
+    return false
+  }
+  
+  // Create signature for insight deduplication
+  createInsightSignature(insight) {
+    // Extract key numbers and words for comparison
+    const numbers = insight.match(/\d+(?:\.\d+)?/g) || []
+    const keyWords = insight.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 4)
+      .filter(word => !['shows', 'indicates', 'reflects', 'demonstrates', 'observed', 'recorded', 'with', 'crore', 'percent', 'percentage'].includes(word))
+      .slice(0, 8) // Increased for better uniqueness
+      .sort()
+      .join(' ')
+    
+    // Also include the emoji category for better differentiation
+    const emoji = insight.substring(0, 2)
+    
+    return `${emoji}|${numbers.join('-')}|${keyWords}`
+  }
+  
+  // Sort insights by importance and category
+  sortInsightsByImportance(insights) {
+    const categoryOrder = {
+      '🗳️': 1,  // Political
+      '💰': 2,  // Economic
+      '🏥': 3,  // Health
+      '👥': 4,  // Social
+      '💻': 5,  // Technology
+      '🌍': 6,  // Environmental
+      '🏆': 7,  // Sports
+      '📚': 8,  // Education
+      '🏢': 9,  // Business
+      '🏗️': 10, // Infrastructure
+      '⚖️': 11, // Legal
+      '📊': 12  // Statistical
+    }
+    
+    return insights.sort((a, b) => {
+      const categoryA = a.substring(0, 2)
+      const categoryB = b.substring(0, 2)
+      
+      const orderA = categoryOrder[categoryA] || 99
+      const orderB = categoryOrder[categoryB] || 99
+      
+      return orderA - orderB
+    })
+  }
+
+  // Generate enhanced article summary when no specific insights are found
+  generateArticleSummary(headline, content) {
+    try {
+      // Clean and prepare text
+      const text = content.replace(/\s+/g, ' ').trim()
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20)
+      
+      // Find the most informative sentences
+      const rankedSentences = this.rankSentencesByInformation(sentences, headline)
+      
+      if (rankedSentences.length > 0) {
+        // Take top 2-3 sentences based on content length
+        const topSentences = rankedSentences.slice(0, content.length > 500 ? 3 : 2)
+        const summary = topSentences.map(s => s.sentence.trim()).join('. ')
+        
+        // Ensure summary is not too long
+        const finalSummary = summary.length > 250 ? summary.substring(0, 247) + '...' : summary
+        
+        return `📄 Article Summary: ${finalSummary}`
+      } else {
+        // Enhanced fallback based on headline analysis
+        const headlineInsights = this.extractHeadlineInsights(headline)
+        if (headlineInsights) {
+          return `📄 Article Focus: ${headlineInsights}`
+        }
+        
+        return `📄 Article covers: ${headline.substring(0, 150)}${headline.length > 150 ? '...' : ''}`
+      }
+    } catch (error) {
+      return `📄 Article discusses: ${headline.substring(0, 100)}${headline.length > 100 ? '...' : ''}`
+    }
+  }
+  
+  // Rank sentences by information content
+  rankSentencesByInformation(sentences, headline) {
+    const headlineWords = new Set(headline.toLowerCase().split(/\s+/).filter(w => w.length > 3))
+    
+    return sentences.map(sentence => {
+      const words = sentence.toLowerCase().split(/\s+/)
+      let score = 0
+      
+      // Score based on various factors
+      score += words.length > 10 ? 2 : 0 // Prefer longer sentences
+      score += words.filter(w => headlineWords.has(w)).length * 3 // Headline relevance
+      score += (sentence.match(/\b(said|says|told|according|announced|reported|revealed|confirmed|stated|declared)\b/gi) || []).length * 2 // News language
+      score += (sentence.match(/\b(government|minister|court|police|hospital|school|company|organization)\b/gi) || []).length * 1 // Important entities
+      score += (sentence.match(/\d+/g) || []).length * 1 // Contains numbers
+      score += sentence.includes('"') ? 1 : 0 // Contains quotes
+      
+      // Penalize very short or very long sentences
+      if (words.length < 8 || words.length > 40) score -= 1
+      
+      return { sentence, score }
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+  }
+  
+  // Extract insights from headline when no content insights are found
+  extractHeadlineInsights(headline) {
+    const lower = headline.toLowerCase()
+    
+    // Check for different types of news
+    if (lower.includes('election') || lower.includes('vote') || lower.includes('poll')) {
+      return `This article discusses electoral developments and political activities`
+    } else if (lower.includes('economy') || lower.includes('gdp') || lower.includes('inflation') || lower.includes('market')) {
+      return `This article covers economic developments and financial matters`
+    } else if (lower.includes('health') || lower.includes('hospital') || lower.includes('medical') || lower.includes('covid')) {
+      return `This article reports on health-related developments and medical updates`
+    } else if (lower.includes('education') || lower.includes('school') || lower.includes('university') || lower.includes('student')) {
+      return `This article focuses on educational developments and academic matters`
+    } else if (lower.includes('technology') || lower.includes('digital') || lower.includes('internet') || lower.includes('ai')) {
+      return `This article discusses technological advancements and digital developments`
+    } else if (lower.includes('environment') || lower.includes('climate') || lower.includes('pollution') || lower.includes('green')) {
+      return `This article covers environmental issues and climate-related developments`
+    } else if (lower.includes('sports') || lower.includes('cricket') || lower.includes('football') || lower.includes('match')) {
+      return `This article reports on sports events and athletic achievements`
+    } else if (lower.includes('business') || lower.includes('company') || lower.includes('corporate') || lower.includes('industry')) {
+      return `This article covers business developments and corporate activities`
+    } else {
+      return null
+    }
+  }
+
+  // Helper function to normalize party names
+  normalizePartyName(party) {
+    const partyMap = {
+      'bjp': 'BJP',
+      'bharatiya janata party': 'BJP',
+      'congress': 'Congress',
+      'indian national congress': 'Congress',
+      'aap': 'AAP',
+      'aam aadmi party': 'AAP',
+      'sp': 'Samajwadi Party',
+      'samajwadi party': 'Samajwadi Party',
+      'bsp': 'BSP',
+      'bahujan samaj party': 'BSP',
+      'tmc': 'TMC',
+      'trinamool congress': 'TMC',
+      'dmk': 'DMK',
+      'aiadmk': 'AIADMK',
+      'jdu': 'JDU',
+      'janata dal': 'JDU',
+      'rjd': 'RJD',
+      'rashtriya janata dal': 'RJD',
+      'shiv sena': 'Shiv Sena',
+      'ncp': 'NCP',
+      'nationalist congress party': 'NCP',
+      'भाजपा': 'BJP',
+      'कांग्रेस': 'Congress',
+      'आम आदमी पार्टी': 'AAP',
+      'समाजवादी पार्टी': 'Samajwadi Party',
+      'बसपा': 'BSP',
+      'ભાજપ': 'BJP',
+      'કોંગ્રેસ': 'Congress',
+      'આમ આદમી પાર્ટી': 'AAP'
+    }
+    
+    return partyMap[party.toLowerCase()] || party.toUpperCase()
   }
 }
 

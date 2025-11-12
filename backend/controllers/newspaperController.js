@@ -244,6 +244,7 @@ const processNewspaperAnalysis = async (newspaperId, filePath) => {
         wordCount: article.wordCount,
         pageNumber: 1, // Will be enhanced later
         position: article.startIndex || 0,
+        insights: article.insights || [], // Add insights field
       })),
       totalArticles: analyzedArticles.length,
       overallSentiment: overallMetrics.summary.overallSentiment,
