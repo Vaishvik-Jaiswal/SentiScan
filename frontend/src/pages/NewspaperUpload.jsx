@@ -319,7 +319,7 @@ const NewspaperUpload = () => {
             {/* Info */}
             <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                <strong>Supported:</strong> PDF files up to 50MB in English, Hindi, or Gujarati
+                <strong>Supported:</strong> PDF files up to 50MB in English, Hindi, Gujarati or Telugu
               </p>
             </div>
           </div>

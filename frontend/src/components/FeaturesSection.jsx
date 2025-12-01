@@ -26,7 +26,7 @@ export default function FeaturesSection({
     {
       icon: <Languages className="h-8 w-8 text-green-600" />,
       title: 'Multilingual Analysis',
-      description: 'Supports sentiment analysis in English, Hindi, and Gujarati languages.',
+      description: 'Supports sentiment analysis in English, Hindi, Gujarati, and Telugu languages.',
       details: 'Native language support with automatic detection and culturally-aware sentiment analysis'
     },
     {

@@ -14,7 +14,7 @@ export default function Home() {
     {
       icon: <Globe className="h-8 w-8 text-green-600" />,
       title: 'Multilingual Analysis',
-      description: 'Supports sentiment analysis in English, Hindi, and Gujarati languages.'
+      description: 'Supports sentiment analysis in English, Hindi, Gujarati, and Telugu languages.'
     },
     {
       icon: <Brain className="h-8 w-8 text-purple-600" />,
@@ -80,7 +80,7 @@ export default function Home() {
                 {/* Subtitle */}
                 <p className="text-xl text-gray-300 mb-8 leading-relaxed max-w-2xl">
                   Transform your documents into actionable insights with our multilingual AI platform. 
-                  Upload, analyze, and understand sentiment across English, Hindi, and Gujarati content.
+                  Upload, analyze, and understand sentiment across English, Hindi, Gujarati, and Telugu content.
                 </p>
                 
                 {/* Features List */}

@@ -1,11 +1,11 @@
 # SentiScan - AI-Powered Multilingual Sentiment Analysis
 
-SentiScan is a comprehensive web application that provides AI-powered sentiment analysis for multilingual documents. Built with the MERN stack and integrated with Azure services, it supports English, Hindi, and Gujarati languages.
+SentiScan is a comprehensive web application that provides AI-powered sentiment analysis for multilingual documents. Built with the MERN stack and integrated with Azure services, it supports English, Hindi, Gujarati, and Telugu languages.
 
 ## 🌟 Features
 
 - **Multi-format Support**: Upload PDF, DOCX, and TXT files
-- **Multilingual Analysis**: Supports English, Hindi, and Gujarati languages
+- **Multilingual Analysis**: Supports English, Hindi, Gujarati, and Telugu languages
 - **AI-Powered**: Uses Azure OpenAI for accurate sentiment classification
 - **Secure Storage**: Files stored in Azure Blob Storage
 - **Rich Analytics**: Interactive charts and visualizations

@@ -502,6 +502,7 @@ class NewspaperProcessor {
     const patterns = {
       hindi: /[\u0900-\u097F]/g,
       gujarati: /[\u0A80-\u0AFF]/g,
+      telugu: /[\u0C00-\u0C7F]/g,
       english: /[a-zA-Z]/g
     }
 

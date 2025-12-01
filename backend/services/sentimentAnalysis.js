@@ -826,7 +826,7 @@ ACCURACY RULES:
 6. Consider the overall tone and likely reader reaction
 7. Provide specific evidence for your classification
 
-The text may be in English, Hindi, or Gujarati. Analyze the sentiment regardless of language.
+The text may be in English, Hindi, Gujarati, or Telugu. Analyze the sentiment regardless of language.
 
 Remember: Accuracy over aggressiveness. Never misclassify positive as negative or negative as positive.`
       }

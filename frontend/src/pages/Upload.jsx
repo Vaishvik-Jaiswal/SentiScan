@@ -446,6 +446,7 @@ const Upload = () => {
                   <option value="english">English</option>
                   <option value="hindi">Hindi</option>
                   <option value="gujarati">Gujarati</option>
+                  <option value="telugu">Telugu</option>
                 </select>
               </div>
 
@@ -477,14 +478,14 @@ const Upload = () => {
               <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <li>• Supported formats: PDF, DOCX, TXT, JPG, PNG, GIF, BMP, WebP</li>
                 <li>• Maximum file size: 10MB</li>
-                <li>• Text should be in English, Hindi, or Gujarati</li>
+                <li>• Text should be in English, Hindi, Gujarati or Telugu</li>
                 <li>• Images will be processed using OCR (Optical Character Recognition)</li>
                 <li>• Files will be processed for sentiment analysis using AI</li>
               </ul>
             ) : (
               <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <li>• Provide a clear title for your article</li>
-                <li>• Content should be in English, Hindi, or Gujarati</li>
+                <li>• Content should be in English, Hindi, Gujarati or Telugu</li>
                 <li>• Minimum 50 characters recommended for accurate analysis</li>
                 <li>• Text will be processed for sentiment analysis using AI</li>
               </ul>

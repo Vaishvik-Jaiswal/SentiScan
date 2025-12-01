@@ -40,6 +40,7 @@ const ArticleDetail = () => {
       case 'english': return 'English'
       case 'hindi': return 'Hindi'
       case 'gujarati': return 'Gujarati'
+      case 'telugu': return 'Telugu'
       case 'mixed': return 'Mixed'
       default: return 'Unknown'
     }

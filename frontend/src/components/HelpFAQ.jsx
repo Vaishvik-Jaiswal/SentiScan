@@ -28,7 +28,7 @@ export default function HelpFAQ({ variant = "full" }) {
         },
         {
           question: "What languages are supported for sentiment analysis?",
-          answer: "Currently, SentiScan supports English, Hindi, and Gujarati languages with automatic language detection. We're working on adding more languages based on user demand."
+          answer: "Currently, SentiScan supports English, Hindi, Gujarati, and Telugu languages with automatic language detection. We're working on adding more languages based on user demand."
         }
       ]
     },

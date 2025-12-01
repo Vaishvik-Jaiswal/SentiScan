@@ -104,7 +104,7 @@ const ProcessingProgress = ({ newspaper, onRefresh, refreshing }) => {
     {
       id: 'language',
       title: 'Language Detection',
-      description: 'Analyzing content to identify dominant language (English, Hindi, Gujarati)',
+      description: 'Analyzing content to identify dominant language (English, Hindi, Gujarati, Telugu)',
       icon: Globe,
       estimatedTime: '5-10 seconds',
       completed: newspaper?.dominantLanguage && newspaper?.processingStep && ['articles', 'sentiment', 'analysis'].includes(newspaper.processingStep),
@@ -618,7 +618,7 @@ const ProcessingProgress = ({ newspaper, onRefresh, refreshing }) => {
               <p>Our AI can process over 1,000 pages per minute and extract text from complex layouts including tables, columns, and multilingual content!</p>
             )}
             {newspaper?.processingStep === 'language' && (
-              <p>We support 3 major languages (English, Hindi, Gujarati) and can detect mixed-language content with 95%+ accuracy!</p>
+              <p>We support 4 major languages (English, Hindi, Gujarati, Telugu) and can detect mixed-language content with 95%+ accuracy!</p>
             )}
             {newspaper?.processingStep === 'articles' && (
               <p>The average newspaper contains 50-200 articles. Our AI uses 4 different extraction strategies to ensure we don't miss any content!</p>

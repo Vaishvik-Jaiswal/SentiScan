@@ -56,7 +56,7 @@ const articleAnalysisSchema = new mongoose.Schema({
   },
   detectedLanguage: {
     type: String,
-    enum: ['english', 'hindi', 'gujarati', 'mixed', 'unknown'],
+    enum: ['english', 'hindi', 'gujarati', 'telugu', 'mixed', 'unknown'],
     default: 'unknown',
   },
   wordCount: {
@@ -138,7 +138,7 @@ const newspaperSchema = new mongoose.Schema(
     },
     dominantLanguage: {
       type: String,
-      enum: ['english', 'hindi', 'gujarati', 'mixed', 'unknown'],
+      enum: ['english', 'hindi', 'gujarati', 'telugu', 'mixed', 'unknown'],
       default: 'unknown',
     },
     processingStatus: {

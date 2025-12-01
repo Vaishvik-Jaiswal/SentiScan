@@ -43,7 +43,7 @@ class TextExtractorService {
     this.currentWorker = 0
   }
 
-  async getOrCreateWorker(language = 'eng+hin+guj') {
+  async getOrCreateWorker(language = 'eng+hin+guj+tel') {
     const workerId = `worker_${this.currentWorker}`
 
     if (!this.workerPool.has(workerId)) {
@@ -462,26 +462,31 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     // Enhanced language pattern detection
     const hindiPattern = /[\u0900-\u097F]/g
     const gujaratiPattern = /[\u0A80-\u0AFF]/g
+    const teluguPattern = /[\u0C00-\u0C7F]/g
     const englishPattern = /[a-z]/g
 
     // Additional patterns for better detection
     const hindiWords = /\b(और|है|में|के|से|को|का|की|पर|एक|यह|वह|भारत|सरकार|मंत्री|प्रधान|राज्य)\b/gi
     const gujaratiWords = /\b(અને|છે|માં|ના|થી|ને|ની|પર|એક|આ|તે|ભારત|સરકાર|મંત્રી|પ્રધાન|રાજ્ય)\b/gi
+    const teluguWords = /\b(మరియు|ఉంది|లో|యొక్క|నుండి|కు|యొక్క|పై|ఒక|ఇది|అది|భారత్|ప్రభుత్వం|మంత్రి|ప్రధాన|రాష్ట్ర|తెలుగు|ఆంధ్రప్రదేశ్|తెలంగాణ|హైదరాబాద్|విశాఖపట్టణం|విజయవాడ|వారంగల్|గుంటూర్|నెల్లూర్|కరీంనగర్|కాకినాడ|అనంతపుర్|చిత్తూర్|కడప|నిజామాబాద్|కుర్నూల్|మహబూబనగర్|అదిలాబాద్|సికందరాబాద్|మెడకల్|తిరుపతి|రాయలసీమ)\b/gi
     const englishWords = /\b(and|is|in|of|to|the|a|an|this|that|india|government|minister|prime|state|new|said|will|has|been)\b/gi
 
     const hindiMatches = (sample.match(hindiPattern) || []).length
     const gujaratiMatches = (sample.match(gujaratiPattern) || []).length
+    const teluguMatches = (sample.match(teluguPattern) || []).length
     const englishMatches = (sample.match(englishPattern) || []).length
 
     const hindiWordMatches = (sample.match(hindiWords) || []).length
     const gujaratiWordMatches = (sample.match(gujaratiWords) || []).length
+    const teluguWordMatches = (sample.match(teluguWords) || []).length
     const englishWordMatches = (sample.match(englishWords) || []).length
 
-    const total = hindiMatches + gujaratiMatches + englishMatches
+    const total = hindiMatches + gujaratiMatches + teluguMatches + englishMatches
 
     console.log(`📊 Language detection results:`, {
       hindi: { chars: hindiMatches, words: hindiWordMatches },
       gujarati: { chars: gujaratiMatches, words: gujaratiWordMatches },
+      telugu: { chars: teluguMatches, words: teluguWordMatches },
       english: { chars: englishMatches, words: englishWordMatches },
       total: total
     })
@@ -493,9 +498,10 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     // Calculate weighted scores (characters + word matches * 3)
     const hindiScore = hindiMatches + (hindiWordMatches * 3)
     const gujaratiScore = gujaratiMatches + (gujaratiWordMatches * 3)
+    const teluguScore = teluguMatches + (teluguWordMatches * 3)
     const englishScore = englishMatches + (englishWordMatches * 2) // Less weight for English words
 
-    const totalScore = hindiScore + gujaratiScore + englishScore
+    const totalScore = hindiScore + gujaratiScore + teluguScore + englishScore
 
     if (totalScore === 0) {
       return 'unknown'
@@ -504,26 +510,33 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     // Calculate percentages
     const hindiPercent = (hindiScore / totalScore) * 100
     const gujaratiPercent = (gujaratiScore / totalScore) * 100
+    const teluguPercent = (teluguScore / totalScore) * 100
     const englishPercent = (englishScore / totalScore) * 100
 
     console.log(`📊 Language score percentages:`, {
       hindi: `${hindiPercent.toFixed(1)}%`,
       gujarati: `${gujaratiPercent.toFixed(1)}%`,
+      telugu: `${teluguPercent.toFixed(1)}%`,
       english: `${englishPercent.toFixed(1)}%`
     })
 
     // Determine dominant language with improved thresholds
-    const nonLatinThreshold = 35 // Lowered threshold for better detection
+    const nonLatinThreshold = 25 // Lowered threshold for better detection of Telugu
     const latinThreshold = 50
 
-    if (hindiPercent >= nonLatinThreshold && hindiPercent > gujaratiPercent && hindiPercent > englishPercent) {
+    if (hindiPercent >= nonLatinThreshold && hindiPercent > gujaratiPercent && hindiPercent > teluguPercent && hindiPercent > englishPercent) {
       console.log(`✅ Detected language: Hindi (${hindiPercent.toFixed(1)}%)`)
       return 'hindi'
     }
 
-    if (gujaratiPercent >= nonLatinThreshold && gujaratiPercent > hindiPercent && gujaratiPercent > englishPercent) {
+    if (gujaratiPercent >= nonLatinThreshold && gujaratiPercent > hindiPercent && gujaratiPercent > teluguPercent && gujaratiPercent > englishPercent) {
       console.log(`✅ Detected language: Gujarati (${gujaratiPercent.toFixed(1)}%)`)
       return 'gujarati'
+    }
+
+    if (teluguPercent >= nonLatinThreshold && teluguPercent > hindiPercent && teluguPercent > gujaratiPercent && teluguPercent > englishPercent) {
+      console.log(`✅ Detected language: Telugu (${teluguPercent.toFixed(1)}%)`)
+      return 'telugu'
     }
 
     if (englishPercent >= latinThreshold) {
@@ -532,7 +545,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     }
 
     // If no clear winner, use the highest percentage
-    const maxPercent = Math.max(hindiPercent, gujaratiPercent, englishPercent)
+    const maxPercent = Math.max(hindiPercent, gujaratiPercent, teluguPercent, englishPercent)
 
     if (maxPercent === hindiPercent && hindiPercent > 15) {
       console.log(`✅ Detected primary language: Hindi (${hindiPercent.toFixed(1)}%)`)
@@ -541,6 +554,10 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
     if (maxPercent === gujaratiPercent && gujaratiPercent > 15) {
       console.log(`✅ Detected primary language: Gujarati (${gujaratiPercent.toFixed(1)}%)`)
       return 'gujarati'
+    }
+    if (maxPercent === teluguPercent && teluguPercent > 15) {
+      console.log(`✅ Detected primary language: Telugu (${teluguPercent.toFixed(1)}%)`)
+      return 'telugu'
     }
     if (maxPercent === englishPercent) {
       console.log(`✅ Detected primary language: English (${englishPercent.toFixed(1)}%)`)
@@ -804,7 +821,24 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
           .png({ quality: 100, compressionLevel: 0 })
           .toBuffer()
 
+        // Version 4: Telugu-optimized preprocessing
+        const version4 = await baseImage
+          .clone()
+          .resize(null, Math.max(2400, metadata.height * 2.5), { // Higher resolution for complex scripts
+            kernel: sharp.kernel.lanczos3,
+            withoutEnlargement: false
+          })
+          .grayscale()
+          .normalize()
+          .sharpen({ sigma: 0.8, m1: 1.5, m2: 2.5, x1: 1.5, y2: 8.0 }) // Optimized for Telugu curves
+          .linear(1.5, -(128 * 0.3)) // Moderate contrast boost
+          .median(1) // Light denoising to preserve character details
+          .gamma(0.9) // Slight gamma adjustment for Telugu characters
+          .png({ quality: 100, compressionLevel: 0 })
+          .toBuffer()
+
         processedBuffers = [
+          { buffer: version4, name: 'telugu-optimized' },
           { buffer: version1, name: 'enhanced' },
           { buffer: version2, name: 'threshold' },
           { buffer: version3, name: 'sharpened' },
@@ -835,7 +869,7 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       }
 
       // Detect primary language from filename or use all languages
-      let languages = 'eng+hin+guj' // All three languages
+      let languages = 'eng+hin+guj+tel' // All four languages
       console.log(`🌐 Using OCR languages: ${languages}`)
 
       let bestResult = { text: '', confidence: 0 }
@@ -859,6 +893,12 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
             segment_penalty_dict_frequent_word: '1',
             allow_blob_division: '1',
             classify_enable_adaptive_debugger: '0',
+            // Telugu-specific improvements
+            textord_heavy_nr: '1',
+            textord_show_blobs: '0',
+            textord_tabfind_show_vlines: '0',
+            preserve_interword_spaces: '1',
+            user_defined_dpi: '300',
           })
 
           const { data: { text, confidence } } = await worker.recognize(procBuffer)
@@ -889,6 +929,26 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       }
 
       console.log(`✅ Best OCR result: confidence=${bestResult.confidence?.toFixed(1)}%, length=${bestResult.text.length}`)
+
+      // Check if we should try Telugu-specific OCR
+      const hasTeluguChars = /[\u0C00-\u0C7F]/.test(bestResult.text)
+      const hasLowConfidence = bestResult.confidence < 60
+      const hasGarbledText = bestResult.text.includes('?') || bestResult.text.includes('□') || bestResult.text.includes('�')
+      
+      if (!hasTeluguChars && (hasLowConfidence || hasGarbledText)) {
+        console.log('🔄 Attempting Telugu-specific OCR retry...')
+        try {
+          const teluguWorker = await this.getOrCreateWorker('tel')
+          const { data: { text: teluguText, confidence: teluguConfidence } } = await teluguWorker.recognize(processedBuffers[0].buffer)
+          
+          if (teluguConfidence > bestResult.confidence && /[\u0C00-\u0C7F]/.test(teluguText)) {
+            console.log(`🎯 Telugu-specific OCR improved results: ${teluguConfidence?.toFixed(1)}% confidence`)
+            bestResult = { text: teluguText, confidence: teluguConfidence }
+          }
+        } catch (teluguError) {
+          console.log('⚠️ Telugu-specific OCR failed:', teluguError.message)
+        }
+      }
 
       // Post-process the OCR result
       let finalText = this.postProcessOCRText(bestResult.text)
@@ -925,6 +985,8 @@ REMEMBER: Extract ONLY the main headline in the SAME LANGUAGE as the article con
       .replace(/([0-9])([અ-હ])/g, '$1 $2') // Space between English numbers and Gujarati
       .replace(/([क-ह])([0-9])/g, '$1 $2') // Space between Hindi and English numbers
       .replace(/([0-9])([क-ह])/g, '$1 $2') // Space between English numbers and Hindi
+      .replace(/([అ-హ])([0-9])/g, '$1 $2') // Space between Telugu and English numbers
+      .replace(/([0-9])([అ-హ])/g, '$1 $2') // Space between English numbers and Telugu
       // Fix line breaks and spacing
       .replace(/\n{3,}/g, '\n\n') // Remove excessive line breaks
       .replace(/[ \t]{2,}/g, ' ') // Remove excessive spaces

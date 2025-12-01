@@ -27,7 +27,7 @@ export default function About() {
     {
       icon: <Languages className="h-8 w-8 text-green-600" />,
       title: 'Multilingual Support',
-      description: 'Native support for English, Hindi, and Gujarati languages with automatic language detection.'
+      description: 'Native support for English, Hindi, Gujarati, and Telugu languages with automatic language detection.'
     },
     {
       icon: <Cloud className="h-8 w-8 text-purple-600" />,
