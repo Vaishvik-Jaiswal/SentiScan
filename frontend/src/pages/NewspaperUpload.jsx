@@ -27,7 +27,7 @@ const NewspaperUpload = () => {
   const [uploading, setUploading] = useState(false)
   const [newspapers, setNewspapers] = useState([])
   const [loading, setLoading] = useState(true)
-
+ 
   useEffect(() => {
     fetchNewspapers()
   }, [])

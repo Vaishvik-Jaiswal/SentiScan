@@ -851,9 +851,21 @@ const generateNewspaperReportHTML = async (newspaper, chartImages = {}) => {
   const negativePercentage = totalArticles > 0 ? Math.round((sentimentData.negative / totalArticles) * 100) : 0
   const neutralPercentage = totalArticles > 0 ? Math.round((sentimentData.neutral / totalArticles) * 100) : 0
 
-  // Get top articles by sentiment
-  const topPositiveArticles = newspaper.articles?.filter(a => a.contentSentiment === 'Positive').slice(0, 3) || []
-  const topNegativeArticles = newspaper.articles?.filter(a => a.contentSentiment === 'Negative').slice(0, 3) || []
+  // Get all articles for the report
+  const allArticles = newspaper.articles || []
+  
+  // Helper function to escape HTML
+  const escapeHtml = (text) => {
+    if (!text) return '';
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+  };
   
   return `
 <!DOCTYPE html>
@@ -1104,6 +1116,38 @@ const generateNewspaperReportHTML = async (newspaper, chartImages = {}) => {
             border-left: 3px solid #d1d5db;
         }
         
+        .article-text {
+            font-size: 0.95em;
+            color: #374151;
+            line-height: 1.7;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .article-insights {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f0f9ff;
+            border-radius: 6px;
+            border-left: 3px solid #0ea5e9;
+        }
+        
+        .article-insights ul {
+            margin: 8px 0 0 0;
+            padding-left: 20px;
+        }
+        
+        .article-insights li {
+            margin: 5px 0;
+            font-size: 0.85em;
+            color: #1e40af;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1268,51 +1312,48 @@ const generateNewspaperReportHTML = async (newspaper, chartImages = {}) => {
             </ul>
         </div>
 
-        <!-- Article Showcase -->
+        <!-- All Articles Analysis -->
         <div class="section page-break">
-            <h2 class="section-title">📰 Featured Article Analysis</h2>
+            <h2 class="section-title">📰 All Articles Analysis</h2>
             
-            ${topPositiveArticles.length > 0 ? `
-            <h3 style="color: #059669; margin-bottom: 15px;">🌟 Top Positive Articles</h3>
+            ${allArticles.length > 0 ? `
             <div class="article-showcase">
-                ${topPositiveArticles.map(article => `
-                    <div class="article-card">
-                        <div class="article-title">${article.title}</div>
+                ${allArticles.map((article, index) => {
+                    const sentimentClass = article.contentSentiment === 'Positive' ? 'sentiment-positive' : 
+                                          article.contentSentiment === 'Negative' ? 'sentiment-negative' : 
+                                          'sentiment-neutral';
+                    
+                    const safeTitle = escapeHtml(article.title || 'Untitled Article');
+                    const safeContent = escapeHtml(article.content || '');
+                    
+                    return `
+                    <div class="article-card" style="margin-bottom: 25px; page-break-inside: avoid;">
+                        <div class="article-title">${safeTitle}</div>
+                        <div class="article-text">${safeContent}</div>
                         <div class="article-meta">
-                            <span class="sentiment-badge sentiment-positive">Positive</span>
-                            <span class="confidence-badge">${article.sentimentConfidence} confidence</span>
-                            <span style="font-size: 0.8em; color: #6b7280;">${article.wordCount} words</span>
+                            <span class="sentiment-badge ${sentimentClass}">${article.contentSentiment || 'Neutral'}</span>
+                            <span class="confidence-badge">${article.sentimentConfidence || 'medium'} confidence</span>
+                            <span style="font-size: 0.8em; color: #6b7280;">${article.wordCount || 0} words</span>
+                            ${article.detectedLanguage ? `<span style="font-size: 0.8em; color: #6b7280; padding: 4px 8px; background: #f1f5f9; border-radius: 12px; border: 1px solid #cbd5e0;">${article.detectedLanguage}</span>` : ''}
                         </div>
                         ${article.contentSentimentReason ? `
                         <div class="article-reason">
-                            <strong>Analysis:</strong> ${article.contentSentimentReason}
+                            <strong>Analysis:</strong> ${escapeHtml(article.contentSentimentReason)}
+                        </div>
+                        ` : ''}
+                        ${article.insights && article.insights.length > 0 && article.insights[0] !== 'No insights' ? `
+                        <div class="article-insights">
+                            <strong style="color: #0c4a6e; font-size: 0.9em;">Key Insights:</strong>
+                            <ul>
+                                ${article.insights.map(insight => `<li>${escapeHtml(insight)}</li>`).join('')}
+                            </ul>
                         </div>
                         ` : ''}
                     </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
-            ` : ''}
-            
-            ${topNegativeArticles.length > 0 ? `
-            <h3 style="color: #dc2626; margin: 25px 0 15px 0;">⚠️ Top Negative Articles</h3>
-            <div class="article-showcase">
-                ${topNegativeArticles.map(article => `
-                    <div class="article-card">
-                        <div class="article-title">${article.title}</div>
-                        <div class="article-meta">
-                            <span class="sentiment-badge sentiment-negative">Negative</span>
-                            <span class="confidence-badge">${article.sentimentConfidence} confidence</span>
-                            <span style="font-size: 0.8em; color: #6b7280;">${article.wordCount} words</span>
-                        </div>
-                        ${article.contentSentimentReason ? `
-                        <div class="article-reason">
-                            <strong>Analysis:</strong> ${article.contentSentimentReason}
-                        </div>
-                        ` : ''}
-                    </div>
-                `).join('')}
-            </div>
-            ` : ''}
+            ` : '<p style="color: #6b7280; font-style: italic;">No articles available for analysis.</p>'}
         </div>
 
         <!-- Recommendations -->
