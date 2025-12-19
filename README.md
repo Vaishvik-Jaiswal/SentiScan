@@ -192,8 +192,5 @@ npm run dev
 
 ## 📞 Support
 
-For support, email kashyapkshitij7704@gmail.com or create an issue on GitHub.
+For support, email vaishvikjaiswal2604@gmail.com or create an issue on GitHub.
 
----
-
-**Built with ❤️ by [Kshitij Kashyap](https://kshitij-kashyap-portfolio.netlify.app/)**
